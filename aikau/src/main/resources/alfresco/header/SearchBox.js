@@ -63,7 +63,7 @@ define(["dojo/_base/declare",
         "dojo/date/stamp",
         "dojo/on"], 
         function(declare, lang, array, _Widget, _Templated, TemporalUtils, FileSizeMixin, _PublishPayloadMixin,
-                 SearchBoxTemplate, LiveSearchTemplate, LiveSearchItemTemplate, AlfCore, AlfXhr, urlTypes, AlfMenuBar, 
+                 SearchBoxTemplate, LiveSearchTemplate, LiveSearchItemTemplate, AlfCore, CoreXhr, urlTypes, AlfMenuBar, 
                  urlUtils, AlfConstants, JSON, domAttr, domStyle, domClass, domConstruct, Stamp, on) {
 
    /**
@@ -274,7 +274,7 @@ define(["dojo/_base/declare",
    /**
     * alfresco/header/SearchBox widget
     */ 
-   return declare([_Widget, _Templated, AlfCore, AlfXhr, TemporalUtils, FileSizeMixin], {
+   return declare([_Widget, _Templated, CoreXhr, TemporalUtils, FileSizeMixin], {
 
       /**
        * The scope to use for i18n messages.
@@ -865,6 +865,14 @@ define(["dojo/_base/declare",
          on(this._searchTextNode, "keydown", lang.hitch(this, function(evt) {
             this.onSearchBoxKeyDown(evt);
          }));
+         // Paste event is called before the pasted value is applied to the source element - we use a setTimeout
+         // to catch the value on the next time around the browser event loop. This is a little messy but works
+         // consistently on all supported browsers.
+         on(this._searchTextNode, "paste", lang.hitch(this, function() {
+            setTimeout(lang.hitch(this, function() {
+               this.onSearchBoxKeyUp({keyCode:0});
+            }), 0);
+         }));
          
          // construct the optional advanced search menu
          if (this.advancedSearch)
@@ -929,6 +937,7 @@ define(["dojo/_base/declare",
                this.siteContext = false;
                this.lastSearchText = "";
                this.onSearchBoxKeyUp(evt);
+               evt.preventDefault();
             }));
             on(this._LiveSearch.contextSiteNode, "click", lang.hitch(this, function(evt) {
                // change context to site
@@ -937,6 +946,7 @@ define(["dojo/_base/declare",
                this.siteContext = true;
                this.lastSearchText = "";
                this.onSearchBoxKeyUp(evt);
+               evt.preventDefault();
             }));
 
             // event handlers to hide/show the panel

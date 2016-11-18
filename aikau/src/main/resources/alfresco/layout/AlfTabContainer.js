@@ -177,13 +177,14 @@ define(["dojo/_base/declare",
         "alfresco/core/topics",
         "dijit/layout/TabContainer",
         "dijit/layout/ContentPane",
+        "dojo/Deferred",
         "dojo/dom-construct",
         "dojo/dom-class",
         "dojo/_base/lang",
         "dojo/_base/array",
         "jquery"], 
         function(declare, _WidgetBase, _TemplatedMixin, template, AlfCore, CoreWidgetProcessing, ResizeMixin, 
-                 topics, TabContainer, ContentPane, domConstruct, domClass, lang, array, $) {
+                 topics, TabContainer, ContentPane, Deferred, domConstruct, domClass, lang, array, $) {
    
    return declare([_WidgetBase, _TemplatedMixin, AlfCore, CoreWidgetProcessing, ResizeMixin], {
       
@@ -241,6 +242,17 @@ define(["dojo/_base/declare",
       doLayout: false,
 
       /**
+       * This can be configured to give all tabs some padding around their content. The amount of
+       * padding is controlled by the LESS variable "tab-padding"
+       * 
+       * @instance
+       * @type {boolean}
+       * @default
+       * @since 1.0.79
+       */
+      padded: false,
+
+      /**
        * This array is used to store widgets for delayed processing
        * 
        * @type {array}
@@ -296,6 +308,16 @@ define(["dojo/_base/declare",
       delayProcessingDefault: true,
 
       /**
+       * A promise of the children of the [tabContainerWidget]{@link module:alfresco/layout/AlfTabContainer#tabContainerWidget}
+       * that is resolved when it is created.
+       * 
+       * @instance
+       * @type {object}
+       * @since 1.0.79
+       */
+      _tabContainerChildrenPromise: null,
+
+      /**
        * Creates the "dijit/layout/TabContainer" wrapped by this widget and sets up associated
        * subscriptions, etc.
        * 
@@ -319,6 +341,10 @@ define(["dojo/_base/declare",
                // Setup child widgets and startup()
                if (this.widgets)
                {
+                  this.widgets = array.filter(this.widgets, function(widget) {
+                     return this.processAllFilters(widget.config);
+                  }, this);
+
                   // By default we want to ensure that we don't unnecessarily process widgets for 
                   // tabs that are not immediately visible. Therefore unless specifically requested 
                   // in the configuration to be the selected tab or the to render immediately then
@@ -372,10 +398,14 @@ define(["dojo/_base/declare",
                {
                   this.alfSubscribe(this.tabDeletionTopic, lang.hitch(this, this.onTabDelete));
                }
-
                
                this.alfPublishResizeEvent(this.domNode);
                domClass.add(this.domNode, "alfresco-layout-AlfTabContainer--tabsDisplayed");
+
+               if (this._tabContainerChildrenPromise)
+               {
+                  this._tabContainerChildrenPromise.resolve(this.tabContainerWidget.getChildren());
+               }
             }
             catch(e)
             {
@@ -385,14 +415,33 @@ define(["dojo/_base/declare",
       },
 
       /**
+       * Returns a promise of the children of the 
+       * [tabContainerWidget]{@link module:alfresco/layout/AlfTabContainer#tabContainerWidget}
+       * that will be resolved when it is created.
+       * 
+       * @instance
+       * @return {promise} A promise of the children of the tab container
+       * @since 1.0.79
+       */
+      getTabContainerChildren: function alfresco_layout_AlfTabContainer__getTabContainerChildren() {
+         return this._tabContainerChildrenPromise;
+      },
+
+      /**
        * Calls [createTabContainer]{@link module:alfresco/layout/AlfTabContainer#createTabContainer}
        * to create the "dijit/layout/TabContainer" that is wrapped by this widget.
        * 
        * @instance
        */
       postCreate: function alfresco_layout_AlfTabContainer__postCreate() {
+         this._tabContainerChildrenPromise = new Deferred();
          this.createTabContainer();
          this.alfSetupResizeSubscriptions(this.onResize, this);
+         this.addResizeListener(this.domNode);
+         if (this.padded)
+         {
+            domClass.add(this.domNode, "alfresco-layout-AlfTabContainer--padded");
+         }
       },
 
       /**

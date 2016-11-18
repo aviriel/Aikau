@@ -36,8 +36,10 @@ define(["dojo/_base/declare",
         "dojo/text!./templates/Picker.html",
         "alfresco/core/Core",
         "alfresco/core/CoreWidgetProcessing",
+        "alfresco/core/topics",
+        "dojo/_base/array",
         "dojo/_base/lang"],
-        function(declare, _WidgetBase, _TemplatedMixin, template, AlfCore, CoreWidgetProcessing, lang) {
+        function(declare, _WidgetBase, _TemplatedMixin, template, AlfCore, CoreWidgetProcessing, topics, array, lang) {
 
    return declare([_WidgetBase, _TemplatedMixin, AlfCore, CoreWidgetProcessing], {
 
@@ -131,6 +133,17 @@ define(["dojo/_base/declare",
       repoNodeRef: "alfresco://company/home",
 
       /**
+       * An array of publications that will be published when the picker is ready. By default there
+       * are none specified.
+       * 
+       * @instance
+       * @type {object}
+       * @default
+       * @since 1.0.85
+       */
+      publishOnReady: null,
+
+      /**
        *
        *
        * @instance
@@ -158,6 +171,21 @@ define(["dojo/_base/declare",
             if (this.subPickersLabel) {
                this.subPickersLabelNode.innerHTML = this.message(this.subPickersLabel);
             }
+         }
+
+         if (this.publishOnReady)
+         {
+            var clonedPublishOnReady = lang.clone(this.publishOnReady);
+            array.forEach(clonedPublishOnReady, function(publication) {
+               if (publication.publishTopic)
+               {
+                  this.alfPublish(publication.publishTopic,
+                                  publication.publishPayload, 
+                                  publication.publishGlobal,
+                                  publication.publishToParent,
+                                  publication.publishScope);
+               }
+            }, this);
          }
       },
 
@@ -289,7 +317,7 @@ define(["dojo/_base/declare",
                                  name: "alfresco/pickers/SingleItemPicker",
                                  config: {
                                     currentPickerDepth: 1,
-                                    requestItemsTopic: "ALF_GET_RECENT_SITES"
+                                    requestItemsTopic: topics.GET_RECENT_SITES
                                  }
                               }
                            ]
@@ -308,7 +336,7 @@ define(["dojo/_base/declare",
                                  name: "alfresco/pickers/SingleItemPicker",
                                  config: {
                                     currentPickerDepth: 1,
-                                    requestItemsTopic: "ALF_GET_FAVOURITE_SITES"
+                                    requestItemsTopic: topics.GET_FAVOURITE_SITES
                                  }
                               }
                            ]

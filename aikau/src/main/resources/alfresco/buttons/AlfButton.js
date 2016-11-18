@@ -32,18 +32,20 @@
  * @module alfresco/buttons/AlfButton
  * @extends module:dijit/form/Button
  * @mixes module:alfresco/core/Core
+ * @mixes module:alfresco/renderers/_PublishPayloadMixin
  * @author Dave Draper
  */
 define(["dojo/_base/declare",
         "dijit/form/Button",
         "alfresco/core/Core",
+        "alfresco/renderers/_PublishPayloadMixin",
         "dojo/dom-class",
         "dojo/_base/array",
         "dojo/_base/lang",
         "dojo/_base/event"],
-        function(declare, Button, AlfCore, domClass, array, lang, event) {
+        function(declare, Button, AlfCore, _PublishPayloadMixin, domClass, array, lang, event) {
 
-   return declare([Button, AlfCore], {
+   return declare([Button, AlfCore, _PublishPayloadMixin], {
 
       /**
        * An array of the CSS files to use with this widget.
@@ -130,6 +132,31 @@ define(["dojo/_base/declare",
       title: null,
 
       /**
+       * An optional topic that can be provided that when published will call 
+       * [onClick]{@link module:alfresco/buttons/AlfButton#onClick}.
+       * 
+       * @instance
+       * @type {string}
+       * @default
+       * @since 1.0.86
+       */
+      triggerTopic: null,
+
+      /**
+       * This attribute has been provided primarily for use when configuring 
+       * [widgetsAdditionalButtons]{@link module:alfresco/forms/Form#widgetsAdditionalButtons} in
+       * a [form]{@link module:alfresco/forms/Form}. It is a simple marker indicating whether
+       * or not the configured payload should be updated with additional data (such as the
+       * form value) or if it should be left with the original data.
+       * 
+       * @instance
+       * @type {boolean}
+       * @default
+       * @since 1.0.81
+       */
+      updatePayload: true,
+
+      /**
        * The topic to listen to to determine when the button should be enabled
        *
        * @instance
@@ -177,16 +204,29 @@ define(["dojo/_base/declare",
          if (this.title) {
             this.focusNode.setAttribute("title", this.message(this.title));
          }
+
+         if (this.triggerTopic)
+         {
+            this.alfSubscribe(this.triggerTopic, lang.hitch(this, this.onClick));
+         }
       },
 
       /**
-       * Cause this button to respond as if it had been clicked.
+       * Cause this button to respond as if it had been clicked. The button will only 
+       * act as though it has been clicked if it is not disabled when the function is called.
        *
        * @instance
        * @since 1.0.49
        */
       activate: function alfresco_buttons_AlfButton__activate() {
-         this.onClick();
+         if (this.get("disabled"))
+         {
+            this.alfLog("log", "Button not activated when disabled", this);
+         }
+         else
+         {
+            this.onClick();
+         }
       },
 
       /**
@@ -230,15 +270,18 @@ define(["dojo/_base/declare",
        * @param {object} evt The click event
        */
       onClick: function alfresco_buttons_AlfButton__onClick(evt) {
+         var payload;
          if (this.publishTopic)
          {
-            this.alfPublish(this.publishTopic, this.publishPayload, (this.publishGlobal !== undefined && this.publishGlobal === true));
+            payload = this.generatePayload(this.publishPayload || {}, this.currentItem, null, this.publishPayloadType,
+                    this.publishPayloadItemMixin, this.publishPayloadModifiers);
+            this.alfPublish(this.publishTopic, payload, (this.publishGlobal !== undefined && this.publishGlobal === true));
          }
          else
          {
             this.alfLog("warn", "A widget was clicked but did not provide any information on how to handle the event", this);
          }
-         if (evt)
+         if (evt && typeof evt.preventDefault === "function")
          {
             event.stop(evt);
          }

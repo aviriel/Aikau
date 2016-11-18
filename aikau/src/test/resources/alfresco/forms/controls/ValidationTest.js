@@ -52,6 +52,10 @@ define(["module",
             input: TestCommon.getTestSelector(textBoxSelectors, "input", ["TOPIC_VALIDATION"]),
             validationMessage: TestCommon.getTestSelector(formControlSelectors, "validation.message", ["TOPIC_VALIDATION"])
          },
+         scopedTopicValidation: {
+            input: TestCommon.getTestSelector(textBoxSelectors, "input", ["SCOPED_TOPIC_VALIDATION"]),
+            validationMessage: TestCommon.getTestSelector(formControlSelectors, "validation.message", ["SCOPED_TOPIC_VALIDATION"])
+         },
          matchTarget: {
             input: TestCommon.getTestSelector(textBoxSelectors, "input", ["MATCH_TARGET"]),
             validationMessage: TestCommon.getTestSelector(formControlSelectors, "validation.message", ["MATCH_TARGET"])
@@ -63,7 +67,14 @@ define(["module",
          dialogTextBox: {
             validationMessage: TestCommon.getTestSelector(formControlSelectors, "validation.message", ["DIALOG_FORM_TEXTBOX"])
          },
-         
+         hiddenValidation: {
+            requirementIndicator: TestCommon.getTestSelector(formControlSelectors, "requirement.indicator", ["VALIDATION_HIDDEN_TEXTBOX"]),
+            invalidIndicator: TestCommon.getTestSelector(formControlSelectors, "invalid.indicator", ["VALIDATION_HIDDEN_TEXTBOX"])
+         },
+         customTopicValidation: {
+            input: TestCommon.getTestSelector(textBoxSelectors, "input", ["CUSTOMIZED_TOPIC_VALIDATION"]),
+            validationWarning: TestCommon.getTestSelector(formControlSelectors, "validation.warning", ["CUSTOMIZED_TOPIC_VALIDATION"])
+         }
       },
       buttons: {
          blockResponse: TestCommon.getTestSelector(buttonSelectors, "button.label", ["BLOCK_RESPONSE"]),
@@ -76,6 +87,14 @@ define(["module",
             disabledConfirmationButton: TestCommon.getTestSelector(dialogSelectors, "disabled.form.dialog.confirmation.button", ["VALIDATION_DIALOG"]),
             displayed: TestCommon.getTestSelector(dialogSelectors, "visible.dialog", ["VALIDATION_DIALOG"]),
             hidden: TestCommon.getTestSelector(dialogSelectors, "hidden.dialog", ["VALIDATION_DIALOG"]),
+            cancelButton: TestCommon.getTestSelector(dialogSelectors, "form.dialog.cancellation.button", ["VALIDATION_DIALOG"])
+         },
+         hiddenValidation: {
+            confirmationButton: TestCommon.getTestSelector(dialogSelectors, "form.dialog.confirmation.button", ["VALIDATION_DIALOG_2"]),
+            disabledConfirmationButton: TestCommon.getTestSelector(dialogSelectors, "disabled.form.dialog.confirmation.button", ["VALIDATION_DIALOG_2"]),
+            displayed: TestCommon.getTestSelector(dialogSelectors, "visible.dialog", ["VALIDATION_DIALOG_2"]),
+            hidden: TestCommon.getTestSelector(dialogSelectors, "hidden.dialog", ["VALIDATION_DIALOG_2"]),
+            cancelButton: TestCommon.getTestSelector(dialogSelectors, "form.dialog.cancellation.button", ["VALIDATION_DIALOG_2"])
          }
       }
    };
@@ -116,11 +135,11 @@ define(["module",
       "Check form confirmation button is enabled": function() {
          return this.remote.findByCssSelector(selectors.textBoxes.threeLettersOrMore.input)
             .type("abc")
-            .end()
+         .end()
 
          .findByCssSelector(selectors.textBoxes.invert.input)
             .type("abc")
-            .end()
+         .end()
 
          .findAllByCssSelector(selectors.form.disabledConfirmationButton)
             .then(function(elements) {
@@ -149,7 +168,7 @@ define(["module",
          return this.remote.findByCssSelector(selectors.textBoxes.threeLettersOrMore.input)
             .clearValue()
             .type("abcdef")
-            .end()
+         .end()
 
          .findByCssSelector(selectors.form.disabledConfirmationButton);
       },
@@ -167,7 +186,7 @@ define(["module",
          return this.remote.findByCssSelector(selectors.textBoxes.threeLettersOrMore.input)
             .clearValue()
             .type("123")
-            .end()
+         .end()
 
          .findByCssSelector(selectors.form.disabledConfirmationButton);
       },
@@ -185,7 +204,7 @@ define(["module",
          return this.remote.findByCssSelector(selectors.textBoxes.threeLettersOrMore.input)
             .clearValue()
             .type("One")
-            .end()
+         .end()
 
          .findByCssSelector(selectors.form.disabledConfirmationButton);
       },
@@ -203,7 +222,7 @@ define(["module",
          return this.remote.findByCssSelector(selectors.textBoxes.invert.input)
             .clearValue()
             .type("abc>def/")
-            .end()
+         .end()
 
          .findByCssSelector(selectors.form.disabledConfirmationButton);
       },
@@ -220,15 +239,15 @@ define(["module",
       "Test asynchoronous validation indicator gets displayed": function() {
          return this.remote.findByCssSelector(selectors.textBoxes.threeLettersOrMore.input)
             .clearValue()
-            .end()
+         .end()
 
          .findByCssSelector(selectors.buttons.blockResponse)
             .click()
-            .end()
+         .end()
 
          .findByCssSelector(selectors.textBoxes.threeLettersOrMore.input)
             .type("O")
-            .end()
+         .end()
 
          .findDisplayedByCssSelector(selectors.textBoxes.threeLettersOrMore.validating);
       },
@@ -237,7 +256,7 @@ define(["module",
          return this.remote.findByCssSelector(selectors.buttons.unblockResponse)
             .click()
             .click() // Needs the 2nd click!
-            .end()
+         .end()
 
          .findByCssSelector(selectors.textBoxes.threeLettersOrMore.validating)
             .isDisplayed()
@@ -251,12 +270,14 @@ define(["module",
          return this.remote.findByCssSelector(selectors.textBoxes.threeLettersOrMore.input)
             .clearValue()
             .type("abc")
-            .end()
-            .findByCssSelector(selectors.textBoxes.invert.input)
+         .end()
+            
+         .findByCssSelector(selectors.textBoxes.invert.input)
             .clearValue()
             .type("abc")
-            .end()
-            .findAllByCssSelector(selectors.form.disabledConfirmationButton)
+         .end()
+      
+         .findAllByCssSelector(selectors.form.disabledConfirmationButton)
             .then(function(elements) {
                assert.lengthOf(elements, 0, "The forms confirmation button should be enabled");
             });
@@ -266,7 +287,7 @@ define(["module",
          return this.remote.findByCssSelector(selectors.textBoxes.topicValidation.input)
             .clearValue()
             .type("#fail")
-            .end()
+         .end()
 
          .findByCssSelector(selectors.form.disabledConfirmationButton);
       },
@@ -275,7 +296,28 @@ define(["module",
          return this.remote.findByCssSelector(selectors.textBoxes.topicValidation.input)
             .clearValue()
             .type("success")
-            .end()
+         .end()
+
+         .findAllByCssSelector(selectors.form.disabledConfirmationButton)
+            .then(function(elements) {
+               assert.lengthOf(elements, 0, "The forms confirmation button should be enabled");
+            });
+      },
+
+      "Test scoped validationTopic returns a failure": function() {
+         return this.remote.findByCssSelector(selectors.textBoxes.scopedTopicValidation.input)
+            .clearValue()
+            .type("#fail")
+         .end()
+
+         .findByCssSelector(selectors.form.disabledConfirmationButton);
+      },
+
+      "Test scoped validationTopic returns success": function() {
+         return this.remote.findByCssSelector(selectors.textBoxes.scopedTopicValidation.input)
+            .clearValue()
+            .type("success")
+         .end()
 
          .findAllByCssSelector(selectors.form.disabledConfirmationButton)
             .then(function(elements) {
@@ -287,7 +329,7 @@ define(["module",
          return this.remote.findByCssSelector(selectors.textBoxes.matchTarget.input)
             .clearValue()
             .type("ABC")
-            .end()
+         .end()
 
          .findByCssSelector(selectors.form.disabledConfirmationButton);
       },
@@ -296,7 +338,7 @@ define(["module",
          return this.remote.findByCssSelector(selectors.textBoxes.matchSource.input)
             .clearValue()
             .type("ABC")
-            .end()
+         .end()
 
          .findAllByCssSelector(selectors.form.disabledConfirmationButton)
             .then(function(elements) {
@@ -308,7 +350,7 @@ define(["module",
          return this.remote.findByCssSelector(selectors.textBoxes.matchTarget.input)
             .clearValue()
             .type("AB")
-            .end()
+         .end()
 
          .findByCssSelector(selectors.form.disabledConfirmationButton);
       },
@@ -317,7 +359,7 @@ define(["module",
          return this.remote.findByCssSelector(selectors.textBoxes.matchSource.input)
             .clearValue()
             .type("AB")
-            .end()
+         .end()
 
          .findAllByCssSelector(selectors.form.disabledConfirmationButton)
             .then(function(elements) {
@@ -333,7 +375,43 @@ define(["module",
          .findByCssSelector(selectors.dialogs.checkMessage.displayed)
          .end()
 
-         .findDisplayedByCssSelector(selectors.textBoxes.dialogTextBox.validationMessage);
+         .findDisplayedByCssSelector(selectors.textBoxes.dialogTextBox.validationMessage)
+         .end();
+      },
+
+      "Validation indicators can be hidden on request": function() {
+         return this.remote.findByCssSelector(selectors.textBoxes.hiddenValidation.requirementIndicator)
+            .isDisplayed()
+            .then(function(displayed) {
+               assert.isFalse(displayed);
+            })
+         .end()
+
+         .findByCssSelector(selectors.textBoxes.hiddenValidation.invalidIndicator)
+            .isDisplayed()
+            .then(function(displayed) {
+               assert.isFalse(displayed);
+            })
+         .end()
+
+         .findByCssSelector(selectors.dialogs.checkMessage.cancelButton)
+            .click()
+         .end()
+
+         .findByCssSelector(selectors.dialogs.checkMessage.hidden);
+      },
+
+      "Customized topic validation works": function() {
+         return this.remote.findByCssSelector(selectors.textBoxes.customTopicValidation.input)
+            .clearValue()
+            .type("used")
+         .end()
+
+         .findDisplayedByCssSelector(selectors.textBoxes.customTopicValidation.validationWarning)
+            .getVisibleText()
+            .then(function(text) {
+               assert.equal(text, "Identifier has been used");
+            });
       }
    });
 });

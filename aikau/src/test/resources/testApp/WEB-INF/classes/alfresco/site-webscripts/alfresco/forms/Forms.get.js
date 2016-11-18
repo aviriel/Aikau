@@ -192,6 +192,18 @@ model.jsonModel = {
                               label: "Additional 2",
                               publishTopic: "AddButton2"
                            }
+                        },
+                        {
+                           name:"alfresco/buttons/AlfButton",
+                           id: "ADD_BUTTON_3",
+                           config: {
+                              updatePayload: false,
+                              label: "Additional 3 (no form values)",
+                              publishTopic: "AddButton3",
+                              publishPayload: {
+                                 original: "only"
+                              }
+                           }
                         }
                      ]
                   }
@@ -308,6 +320,52 @@ model.jsonModel = {
                            }
                         }
                      ]
+                  }
+               }
+            ]
+         }
+      },
+      {
+         name: "alfresco/layout/ClassicWindow",
+         config: {
+            title: "Reset Button on Form",
+            widgets: [
+               {
+                  id: "RESET_FORM",
+                  name: "alfresco/forms/Form",
+                  config: {
+                     pubSubScope: "RESETTABLE_",
+                     setValueTopic: "RESET",
+                     setValueTopicGlobalScope: false,
+                     okButtonPublishTopic: "OK",
+                     widgets: [
+                        {
+                           id: "TEXT_BOX_8",
+                           name: "alfresco/forms/controls/TextBox",
+                           config: {
+                              fieldId: "TB8",
+                              name: "text",
+                              label: "Text"
+                           }
+                        }
+                     ],
+                     widgetsAdditionalButtons: [
+                        {
+                           id: "RESET",
+                           name: "alfresco/buttons/AlfButton",
+                           config: {
+                              updatePayload: false,
+                              label: "Reset",
+                              publishTopic: "RESET",
+                              publishPayload: {
+                                 text: "Original"
+                              }
+                           }
+                        }
+                     ],
+                     value: {
+                        text: "Original"
+                     }
                   }
                }
             ]

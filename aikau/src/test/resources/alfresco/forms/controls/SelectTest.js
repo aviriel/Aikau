@@ -68,7 +68,7 @@ define(["module",
 
          .findAllByCssSelector("#FIXED_INVALID_CHANGES_TO_CONTROL_dropdown .dijitMenuItemLabel")
             .then(function(elements) {
-               assert.lengthOf(elements, 3, "Incorrect number of fixed options found");
+               assert.lengthOf(elements, 4, "Incorrect number of fixed options found");
             });
       },
 
@@ -81,7 +81,7 @@ define(["module",
       },
 
       "Test fixed option label set from value": function() {
-         return this.remote.findByCssSelector("#FIXED_INVALID_CHANGES_TO_CONTROL_dropdown table tr:nth-child(3) td.dijitMenuItemLabel")
+         return this.remote.findByCssSelector("#FIXED_INVALID_CHANGES_TO_CONTROL_dropdown table tr:nth-child(4) td.dijitMenuItemLabel")
             .getVisibleText()
             .then(function(resultText) {
                assert.equal(resultText, "NO LABEL", "Fixed label not set correctly from value");
@@ -131,7 +131,7 @@ define(["module",
          .findByCssSelector("#HAS_CHANGES_TO_CONTROL_dropdown table tr:nth-child(1) td.dijitMenuItemLabel")
             .getVisibleText()
             .then(function(resultText) {
-               assert.equal(resultText, "Update1_4", "Updated label not set correctly by pub/sub");
+               assert.equal(resultText, "Update1_6", "Updated label not set correctly by pub/sub");
             });
       },
 
@@ -234,7 +234,7 @@ define(["module",
          .findByCssSelector("#HAS_CHANGES_TO_CONTROL_dropdown table tr:nth-child(1) td.dijitMenuItemLabel")
             .getVisibleText()
             .then(function(resultText) {
-               assert.equal(resultText, "Update1_6", "Updated label not set correctly by pub/sub");
+               assert.equal(resultText, "Update1_8", "Updated label not set correctly by pub/sub");
             });
       },
 
@@ -309,6 +309,14 @@ define(["module",
                assert.isBelow(forcedWidth, normalWidth);
             })
             .pressKeys(keys.ESCAPE);
+      },
+
+      "Width configuration is honoured": function() {
+         return this.remote.findByCssSelector("#LONG_OPTIONS_FORCEWIDTH_CONTROL .dijitSelectLabel")
+            .getSize()
+            .then(function(size) {
+               assert.equal(size.width, "200");
+            });
       }
    });
 });

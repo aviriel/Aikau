@@ -67,19 +67,30 @@ define(["alfresco/core/topics",
        * @param {object} evt Dojo-normalised event object
        * @since 1.0.49
        */
-      handleKeyUp: function alfresco_forms_controls_TextBox__handleKeyUp(evt) {
-         if (this.publishTopicOnEnter && evt.keyCode === keys.ENTER) {
+      handleKeyUp: function alfresco_forms_controls_utilities_TextBoxValueChangeMixin__handleKeyUp(evt) {
+         // On key up events indicate that the user has changed the field, this means that 
+         // error messages can be displayed without relying on focus being lost
+         this._hadUserUpdate = true;
+         
+         if (this.publishTopicOnEnter && evt.keyCode === keys.ENTER) 
+         {
             this.alfPublish(this.publishTopicOnEnter, {
                fieldId: this.id
             });
             evt.preventDefault();
-         } else {
+         } 
+         else 
+         {
             this._oldValue = this.__oldValue; // Set the old value as the last buffer...
             this.__oldValue = this.getValue(); // Make the last buffer the current value being set
 
-            this.alfLog("log", "keyup - OLD value: " + this._oldValue + ", NEW value: " + this.getValue());
-            this.formControlValueChange(this.name, this._oldValue, this.getValue());
-            this.validate();
+            // See AKU-1121 - only validate on actual changes...
+            if (this._oldValue !== this.__oldValue)
+            {
+               this.alfLog("log", "keyup - OLD value: " + this._oldValue + ", NEW value: " + this.getValue());
+               this.formControlValueChange(this.name, this._oldValue, this.getValue());
+               this.validate();
+            }
          }
       },
 
@@ -92,7 +103,7 @@ define(["alfresco/core/topics",
        * @param {*} newValue The new value
        * @since 1.0.49
        */
-      fireChangeEvent: function alfresco_forms_controls_TextBox__fireChangeEvent(name, oldValue, newValue) {
+      fireChangeEvent: function alfresco_forms_controls_utilities_TextBoxValueChangeMixin__fireChangeEvent(name, oldValue, newValue) {
          if (oldValue !== newValue) {
             this.onValueChangeEvent(name, oldValue, newValue);
          }
@@ -105,10 +116,18 @@ define(["alfresco/core/topics",
        * 
        * @instance
        */
-      setupChangeEvents: function alfresco_forms_controls_TextBox__setupChangeEvents() {
+      setupChangeEvents: function alfresco_forms_controls_utilities_TextBoxValueChangeMixin__setupChangeEvents() {
          if (this.wrappedWidget)
          {
             this.wrappedWidget.on("keyup", lang.hitch(this, this.handleKeyUp));
+            // Paste event is called before the pasted value is applied to the source element - we use a setTimeout
+            // to catch the value on the next time around the browser event loop. This is a little messy but works
+            // consistently on all supported browsers.
+            this.wrappedWidget.on("paste", lang.hitch(this, function() {
+               setTimeout(lang.hitch(this, function() {
+                  this.handleKeyUp({keyCode:0});
+               }), 0);
+            }));
             if (typeof this.wrappedWidget.watch === "function")
             {
                this.own(this.wrappedWidget.watch("value", lang.hitch(this, this.fireChangeEvent)));

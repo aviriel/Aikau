@@ -166,6 +166,17 @@ define(["dojo/_base/declare",
       handleOverflow: true,
 
       /**
+       * Indicates the the default minimum width rules for the dialog (controlled through LESS
+       * variables) can be ignored.
+       * 
+       * @instance
+       * @type {boolean}
+       * @default
+       * @since 1.0.84
+       */
+      noMinWidth: false,
+
+      /**
        * A placeholder for the resize-listener that's enabled while the dialog is visible. This
        * value is set automatically.
        *
@@ -250,7 +261,7 @@ define(["dojo/_base/declare",
          var simplePanelHeight = null;
          if (this.contentHeight)
          {
-            simplePanelHeight = (parseInt(this.contentHeight, 10) - paddingAdjustment) + "px";
+            simplePanelHeight = (Math.min(maxHeight, parseInt(this.contentHeight, 10)) - paddingAdjustment) + "px";
          }
          
          calculatedHeights.documentHeight = docHeight;
@@ -307,6 +318,10 @@ define(["dojo/_base/declare",
          {
             domClass.add(this.domNode, this.additionalCssClasses);
          }
+         if (this.noMinWidth)
+         {
+            domClass.add(this.domNode, "alfresco-dialog-AlfDialog--no-min-width");
+         }
 
          // Set a width for the dialog
          if (this.dialogWidth)
@@ -361,7 +376,7 @@ define(["dojo/_base/declare",
                assignTo: "_dialogPanel",
                config: {
                   handleOverflow: this.handleOverflow,
-                  height: calculatedHeights.simplePanelHeight,
+                  height: !this.handleOverflow && this.contentHeight ? "100%" : calculatedHeights.simplePanelHeight,
                   widgets: this.widgetsContent
                }
             }];
@@ -609,6 +624,25 @@ define(["dojo/_base/declare",
             // When creating the buttons, attach the handler to each created...
             this._buttons = [];
             array.forEach(widgets, lang.hitch(this, this.attachButtonHandler));
+
+            // See AKU-1116... 
+            // Forms support the ability to submit on the publication of a topic, but form
+            // dialogs hide the standard form buttons. This section of code will handle events
+            // emitted by forms when no form buttons can be found. It allows the form dialogs
+            // to be submitted on enter...
+            on(this.domNode, "onFormSubmit", lang.hitch(this, function() {
+               if (this._buttons)
+               {
+                  array.some(this._buttons, function(button) {
+                     if (domClass.contains(button.domNode, "confirmationButton"))
+                     {
+                        button.activate();
+                        return true;
+                     }
+                     return false;
+                  });
+               }
+            }));
          }
          else
          {

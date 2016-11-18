@@ -31,7 +31,7 @@ define(function() {
 
    // This is the collection to change when only some tests are required
    var someTests = [
-      "alfresco/upload/UploadMonitorTest"
+      "alfresco/navigation/PathTreeTest"
 
       // THESE TESTS REGULARLY, BUT INTERMITTENTLY, FAIL WHEN RUNNING FULL SUITES - INVESTIGATE
       // "alfresco/preview/PdfJsPreviewFaultsTest",
@@ -50,6 +50,7 @@ define(function() {
       "alfresco/accessibility/AccessibilityMenuTest",
       "alfresco/accessibility/SemanticWrapperMixinTest",
 
+      "alfresco/buttons/ButtonsTest",
       "alfresco/buttons/DropDownButtonTest",
       "alfresco/buttons/DynamicPayloadButtonTest",
 
@@ -84,6 +85,7 @@ define(function() {
       "alfresco/dnd/NestedConfigurationTest",
       "alfresco/dnd/NestedReorderTest",
 
+      "alfresco/documentlibrary/AlfDocumentActionMenuItemTest",
       "alfresco/documentlibrary/AlfDocumentTest",
       "alfresco/documentlibrary/AlfDocumentFiltersTest",
       "alfresco/documentlibrary/AlfDocumentListTest",
@@ -121,23 +123,28 @@ define(function() {
       "alfresco/forms/FormsTest",
       "alfresco/forms/FormValidationTest",
       "alfresco/forms/HashFormTest",
+      "alfresco/forms/InitialValuesTest",
+      "alfresco/forms/LateFieldRegistrationTest",
+      "alfresco/forms/LayoutRulesTest",
       "alfresco/forms/SingleTextFieldFormTest",
       "alfresco/forms/TabsInFormsTest",
 
       "alfresco/forms/controls/AsyncFormControlLoadingTest",
       "alfresco/forms/controls/AutoSetTest",
       "alfresco/forms/controls/BaseFormTest",
-      "alfresco/forms/controls/ButtonsTest",
       "alfresco/forms/controls/CheckBoxTest",
       "alfresco/forms/controls/CodeMirrorTest",
       "alfresco/forms/controls/ComboBoxTest",
       "alfresco/forms/controls/ContainerPickerTest",
       "alfresco/forms/controls/DateTextBoxTest",
+      "alfresco/forms/controls/DateRangeTest",
       "alfresco/forms/controls/DisablingSubmitFormTest",
       "alfresco/forms/controls/DocumentPickerTest",
       "alfresco/forms/controls/DocumentPickerSingleItemTest",
+      "alfresco/forms/controls/FilePickerTest",
       "alfresco/forms/controls/FilteringSelectTest",
       "alfresco/forms/controls/FormButtonDialogTest",
+      "alfresco/forms/controls/MarkdownWithPreviewEditorTest",
       "alfresco/forms/controls/MultipleEntryFormControlTest",
       "alfresco/forms/controls/MultiSelectInputTest",
       "alfresco/forms/controls/NumberSpinnerTest",
@@ -149,6 +156,7 @@ define(function() {
       "alfresco/forms/controls/SitePickerTest",
       "alfresco/forms/controls/TextAreaTest",
       "alfresco/forms/controls/TextBoxTest",
+      "alfresco/forms/controls/TreeTest",
       "alfresco/forms/controls/TinyMCETest",
       "alfresco/forms/controls/ValidationTest",
       "alfresco/forms/controls/XssPreventionTest",
@@ -264,6 +272,7 @@ define(function() {
       "alfresco/renderers/ThumbnailTest",
       "alfresco/renderers/ThumbnailAspectAndSizeTest",
       "alfresco/renderers/ToggleStateActionsTest",
+      "alfresco/renderers/UserTest",
       "alfresco/renderers/XhrActionsTest",
 
       "alfresco/renderers/actions/CopyToActionTest",
@@ -287,6 +296,7 @@ define(function() {
       "alfresco/services/DialogServiceTest",
       "alfresco/services/DocumentServiceTest",
       "alfresco/services/FileUploadServiceTest",
+      "alfresco/services/FormsRuntimeServiceTest",
       "alfresco/services/FullScreenDialogTest",
       "alfresco/services/LoggingServiceTest",
       "alfresco/services/NavigationServiceTest",

@@ -1,6 +1,14 @@
 .alfresco-forms-controls-BaseFormControl {
    > .control-row {
       > .control {
+
+         .dijitSelectLabel {
+            text-overflow: ellipsis;
+            overflow: hidden;
+            text-align: left;
+            height: 1.2em;
+         }
+
          > table {
             background-color: @primary-background-color;
             border-radius: 3px;

@@ -79,12 +79,41 @@ define(["alfresco/forms/controls/BaseFormControl",
        * @param {Object} option The option object
        * @returns {Object} An appropriate menu item
        */
-      _getMenuItemForOption: function(option) {
-         var menuItem = this.inherited(arguments);
+      _getMenuItemForOption: function alfresco_forms_controls_Select_CustomSelect___getMenuItemForOption(option) {
+         var menuItem;
+         if(option.value === "") 
+         {
+            // See AKU-1083
+            // Create a MenuItem with a temporary value and then swap in the requested value
+            menuItem = this.inherited(arguments, [{label: option.label, value: "TMP"}]);
+            menuItem.set("value", option.value);
+         }
+         else
+         {
+            menuItem = this.inherited(arguments);
+         }
+         
          if (this.truncate && this.forceWidth && option.label) {
             menuItem.domNode.title = option.label;
          }
          return menuItem;
+      },
+
+      /**
+       * Overridden to ensure that width is set if required.
+       *
+       * @instance
+       * @override
+       * @param {Object} option The option object
+       * @returns {Object} An appropriate menu item
+       * @since 1.0.79
+       */
+      _setDisplay: function alfresco_forms_controls_Select_CustomSelect___setDisplay(/*jshint unused:false*/ newDisplay) {
+         this.inherited(arguments);
+         if (this.width)
+         {
+            domStyle.set(this.containerNode.firstChild, "width", this.width);
+         }
       }
    });
    
@@ -100,21 +129,39 @@ define(["alfresco/forms/controls/BaseFormControl",
       cssRequirements: [{cssFile:"./css/Select.css"}],
 
       /**
-       * Adds a new option to the wrapped widget.
-       *
+       * Indicates whether or not the width of the options drop-down should be constained to the
+       * width of the form control. If the [width]{@link module:alfresco/forms/controls/Select#width}
+       * is not set then this change to the width of the last displayed value.
+       * 
        * @instance
-       * @override
-       * @param {object} option The option to add
-       * @param {number} index The index of the option to add
+       * @type {boolean}
+       * @default
+       * @since 1.0.37
        */
-      addOption: function alfresco_forms_controls_Select__addOption(option, /*jshint unused:false*/ index) {
-         // Dijit Select widget does not support empty values! https://bugs.dojotoolkit.org/ticket/9973
-         if (option.value === "") {
-            this.alfLog("error", "Attempted to add option with empty value", option);
-         } else {
-            this.inherited(arguments);
-         }
-      },
+      forceWidth: false,
+
+      /**
+       * Indicates whether or not the options displayed should be truncated. This can be used with
+       * [forceWidth]{@link module:alfresco/forms/controls/Select#forceWidth} to display an
+       * ellipsis on options that are longer than the available width (rather than being displayed
+       * over multiple lines).
+       * 
+       * @instance
+       * @type {boolean}
+       * @default
+       * @since 1.0.37
+       */
+      truncate: false,
+
+      /**
+       * An optional width to set the value of the form control.
+       * 
+       * @instance
+       * @type {string}
+       * @default
+       * @since 1.0.79
+       */
+      width: null,
 
       /**
        * @instance
@@ -125,7 +172,8 @@ define(["alfresco/forms/controls/BaseFormControl",
             id : this.id + "_CONTROL",
             name: this.name,
             forceWidth: this.forceWidth,
-            truncate: this.truncate
+            truncate: this.truncate,
+            width: this.width
          };
       },
       

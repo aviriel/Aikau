@@ -44,6 +44,20 @@ define([],function() {
       ADD_FAVOURITE_NODE: "ALF_PREFERENCE_ADD_DOCUMENT_FAVOURITE",
 
       /**
+       * This can be published to request to add a site as a favourite.
+       *
+       * @instance
+       * @type {String}
+       * @default
+       * @since 1.0.94
+       * 
+       * @event
+       * @property {string} site The shortName of the site to add as a favourite
+       * @property {string} user The username of the user to make the site a favourite of
+       */
+      ADD_FAVOURITE_SITE: "ALF_ADD_FAVOURITE_SITE",
+
+      /**
        * Triggered when the progress request has failed
        *
        * @instance
@@ -313,6 +327,22 @@ define([],function() {
       CREATE_SITE: "ALF_CREATE_SITE",
 
       /**
+       * This topic is published from the [DataListService]{@link module:alfresco/services/DataListService}
+       * when a Data List has had it's title and/or description updated.
+       * 
+       * @instance
+       * @type {string}
+       * @default
+       * @since 1.0.85
+       *
+       * @event
+       * @property {string} nodeRef The NodeRef of the Data List that has been updated
+       * @property {string} title The new title of the Data List
+       * @property {string} description The new description of the Data List
+       */
+      DATA_LIST_UPDATED: "ALF_DATA_LIST_UPDATED",
+
+      /**
        * Delete the archive created for downloading.
        *
        * @instance
@@ -331,6 +361,71 @@ define([],function() {
        * @since 1.0.34
        */
       DELETE_CONTENT: "ALF_DELETE_CONTENT_REQUEST",
+
+      /**
+       * This topic is published to request the deletion of a Data List.
+       *
+       * @instance
+       * @type {string}
+       * @default
+       * @since 1.0.85
+       *
+       * @event
+       * @property {string} nodeRef The NodeRef of the Data List to delete
+       */
+      DELETE_DATA_LIST: "ALF_DELETE_DATA_LIST_REQUEST",
+
+      /**
+       * This topic is published when the user confirms that they wish to delete a Data List.
+       *
+       * @instance
+       * @type {string}
+       * @default
+       * @since 1.0.85
+       *
+       * @event
+       * @property {string} nodeRef The NodeRef of the Data List to delete
+       */
+      DELETE_DATA_LIST_CONFIRMATION: "ALF_DELETE_DATA_LIST_CONFIRMATION",
+
+      /**
+       * This topic is published when a Data List has been successfully deleted.
+       *
+       * @instance
+       * @type {string}
+       * @default
+       * @since 1.0.85
+       *
+       * @event
+       * @property {string} nodeRef The NodeRef of the Data List to delete
+       */
+      DELETE_DATA_LIST_SUCCESS: "ALF_DELETE_DATA_LIST_SUCCESS",
+
+      /**
+       * This topic is published to request the deletion of a itemS from a Data List.
+       *
+       * @instance
+       * @type {string}
+       * @default
+       * @since 1.0.86
+       *
+       * @event
+       * @property {string[]} nodeRefs The NodeRef of the Data List to delete
+       */
+      DELETE_DATA_LIST_ITEMS: "ALF_DELETE_DATA_LIST_ITEMS_REQUEST",
+
+      /**
+       * This topic is published when the user confirms that they wish to delete items from a Data List.
+       *
+       * @instance
+       * @type {string}
+       * @default
+       * @since 1.0.86
+       *
+       * @event
+       * @property {string} nodeRefs The NodeRefs of the items to delete
+       */
+      DELETE_DATA_LIST_ITEMS_CONFIRMATION: "ALF_DELETE_DATA_LIST_ITEMS_CONFIRMATION",
 
       /**
        * This topic is published to request the deletion of a site.
@@ -360,6 +455,19 @@ define([],function() {
        * @property {string} title The new title
        */
       DIALOG_CHANGE_TITLE: "ALF_DIALOG_CHANGE_TITLE",
+
+      /**
+       * This topic can be published to disabled the activity feed for a site.
+       * 
+       * @instance
+       * @type {string}
+       * @default
+       * @since 1.0.87
+       *
+       * @event
+       * @parameter {string} siteId The shortName of the site to disable the activitiy feed for.
+       */
+      DISABLE_SITE_ACTIVITY_FEED: "ALF_DISABLE_SITE_ACTIVITY_FEED",
 
       /**
        * This topic can be published to request that a notification be displayed. It is subscribed to 
@@ -560,6 +668,19 @@ define([],function() {
       EDIT_SITE: "ALF_EDIT_SITE",
 
       /**
+       * This topic can be published to enable the activity feed for a site.
+       * 
+       * @instance
+       * @type {string}
+       * @default
+       * @since 1.0.87
+       *
+       * @event
+       * @parameter {string} siteId The shortName of the site to be enable the activity feed for
+       */
+      ENABLE_SITE_ACTIVITY_FEED: "ALF_ENABLE_SITE_ACTIVITY_FEED",
+
+      /**
        * This topic can be fired when the enter key is pressed (but normally is not by default).
        *
        * @instance
@@ -570,6 +691,19 @@ define([],function() {
        * @event
        */
       ENTER_KEY_PRESSED: "ALF_ENTER_KEY_PRESSED",
+
+      /**
+       * This topic can be published to request that the current user follow the users provided.
+       * 
+       * @instance
+       * @type {string}
+       * @default
+       * @since  1.0.86
+       *
+       * @event
+       * @property {string[]} userNames An array of the userNames of the users to follow.
+       */
+      FOLLOW_USERS: "ALF_FOLLOW_USERS",
 
       /**
        * This topic can be published to request a list of authorities to be returned (e.g. users
@@ -628,6 +762,48 @@ define([],function() {
        * @event
        */
       GET_CLOUD_TENANTS: "ALF_GET_CLOUD_TENANTS",
+
+      /**
+       * This topic can be used to request the Data Lists for the supplied site
+       * 
+       * @instance
+       * @type {string}
+       * @default
+       * @since 1.0.85
+       *
+       * @event
+       * @property {string} siteId The id of the site to get the Data Lists for
+       */
+      GET_DATA_LISTS: "ALF_GET_DATA_LISTS",
+
+      /**
+       * This topic can be used to request items for a particular Data Lists
+       * 
+       * @instance
+       * @type {string}
+       * @default
+       * @since 1.0.86
+       *
+       * @event
+       * @property {string} nodeRef The NodeRef of the Data List to get items for
+       */
+      GET_DATA_LIST_ITEMS: "ALF_GET_DATA_LIST_ITEMS",
+
+      /**
+       * This topic can be used to handle requests to build a widget model for displaying a list
+       * showing the items in a specific Data List
+       * 
+       * @instance
+       * @type {string}
+       * @default
+       * @since 1.0.85
+       *
+       * @event
+       * @property {string} nodeRef The NodeRef of the Data List to display
+       * @property {string} itemType The type of Data List to display
+       * @property {string} [alfResponseTopic] An optional topic to publish the widget model on.
+       */
+      GET_DATA_LIST_WIDGETS: "ALF_GET_DATA_LIST_WIDGETS",
 
       /**
        * This topic can be published to request the data for a list of documents at the location
@@ -689,6 +865,44 @@ define([],function() {
       GET_DOCUMENT: "ALF_RETRIEVE_SINGLE_DOCUMENT_REQUEST",
 
       /**
+       * This topic can be published to retrieve a list of the sites that have marked as a favourite
+       * of the current user. Unfortunately at the present time this cannot be used for requesting 
+       * [form control]{@link module:alfresco/forms/controls/BaseFormControl} options.
+       * 
+       * @instance
+       * @type {string}
+       * @default
+       * @since 1.0.81
+       *
+       * @event
+       */
+      GET_FAVOURITE_SITES: "ALF_GET_FAVOURITE_SITES",
+
+      /**
+       * This can be published to request the list of users that the current user is following.
+       *
+       * @instance
+       * @type {string}
+       * @default
+       *
+       * @since 1.0.86
+       * @event
+       */
+      GET_FOLLOWED_USERS: "ALF_GET_FOLLOWED_USERS",
+
+      /**
+       * This can be published to request the list of users that are following the current user.
+       *
+       * @instance
+       * @type {string}
+       * @default
+       *
+       * @since 1.0.86
+       * @event
+       */
+      GET_FOLLOWING_USERS: "ALF_GET_FOLLOWING_USERS",
+
+      /**
        * This topic can be published by a [form control]{@link module:alfresco/forms/controls/BaseFormControl}
        * when it needs to retrieve options that can only be determined from other values containined within the
        * form. This allows options to be dynamically requested that change as other form values are updated.
@@ -702,6 +916,19 @@ define([],function() {
        * @property {string} publishTopic The topic publish the payload once augmented with the form value.
        */
       GET_FORM_VALUE_DEPENDENT_OPTIONS: "ALF_GET_FORM_VALUE_DEPENDENT_OPTIONS",
+
+      /**
+       * This topic can be published to retrieve the details of a single user.
+       * 
+       * @instance
+       * @type {string}
+       * @default
+       * @since 1.0.86
+       *
+       * @event
+       * @property {string} userName The userName of the user to retrieve
+       */
+      GET_USER: "ALF_GET_USER",
 
       /**
        * This topic can be published to request a user preference be returned. It is typically handled by 
@@ -720,6 +947,35 @@ define([],function() {
       GET_PREFERENCE: "ALF_PREFERENCE_GET",
 
       /**
+       * This topic can be published to retrieve a list of the sites that have recently been visited
+       * by the current user. Unfortunately at the present time this cannot be used for requesting 
+       * [form control]{@link module:alfresco/forms/controls/BaseFormControl} options.
+       * 
+       * @instance
+       * @type {string}
+       * @default
+       * @since 1.0.81
+       *
+       * @event
+       */
+      GET_RECENT_SITES: "ALF_GET_RECENT_SITES",
+
+      /**
+       * This topic can be published to retrieve a list of all the sites that are accessible to the
+       * current user. Unfortunately at the present time this cannot be used for requesting 
+       * [form control]{@link module:alfresco/forms/controls/BaseFormControl} options.
+       * 
+       * @instance
+       * @type {string}
+       * @default
+       * @since 1.0.81
+       *
+       * @event
+       * @property {boolean} [includeFeedSettings=false] Indicates whether feed control data should be retrieved
+       */
+      GET_SITES: "ALF_GET_SITES",
+
+      /**
        * This topic can be published to request a list of all available users in the Alfresco Repository.
        * This request is expected to be handled by the [UserService]{@link module:alfresco/services/UserService}.
        * The results are published on 'alfResponseTopic' provided, and are defined as an array as attribute "items"
@@ -734,6 +990,18 @@ define([],function() {
        * @property {string} alfResponseTopic The topic on which to publish the users data
        */
       GET_USERS: "ALF_GET_USERS",
+
+      /**
+       * This topic can be published to get a list of the sites that a user belongs to.
+       * 
+       * @instance
+       * @type {string}
+       * @default
+       * @since 1.0.87
+       *
+       * @event
+       */
+      GET_USER_SITES: "ALF_GET_USER_SITES",
 
       /**
        * Can be published to initialise the creation of a synchronization between an on-premise node and
@@ -1043,6 +1311,34 @@ define([],function() {
       REQUEST_ARCHIVE_PROGRESS: "ALF_ARCHIVE_PROGRESS_REQUEST",
 
       /**
+       * This can be published to request the user to confirm an action.
+       * 
+       * @instance
+       * @type {string}
+       * @default
+       * @since 1.0.85
+       * 
+       * @event
+       * @property {string} [confirmationTitle="Please confirm"] The title to show in the dialog
+       * @property {string} [confirmationPrompt="Are you sure?"] The prompt message to display in the dialog
+       * @property {string} [confirmationButtonLabel="Yes"] The label for the confirmation button
+       * @property {string} [cancellationButtonLabel="No"] The label for the cancellation button
+       * @property {object} [confirmationPublication] The publication to make on confirmation
+       * @property {string} [confirmationPublication.publishTopic] The topic to publish confirmation on
+       * @property {object} [confirmationPublication.publishPayload] The payload to publish on confirmation
+       * @property {boolean} [confirmationPublication.publishGlobal] Whether to publish confirmation globally
+       * @property {boolean} [confirmationPublication.publishToParent] Whether to publish confirmation on the parent scope
+       * @property {string} [confirmationPublication.publishScope] A custom scope to publish confirmation on
+       * @property {object} [cancellationPublication] The publication to make on cancellation
+       * @property {string} [cancellationPublication.publishTopic] The topic to publish cancellation on
+       * @property {object} [cancellationPublication.publishPayload] The payload to publish on cancellation
+       * @property {boolean} [cancellationPublication.publishGlobal] Whether to publish cancellation globally
+       * @property {boolean} [cancellationPublication.publishToParent] Whether to publish cancellation on the parent scope
+       * @property {string} [cancellationPublication.publishScope] A custom scope to publish cancellation on
+       */
+      REQUEST_CONFIRMATION_PROMPT: "ALF_REQUEST_CONFIRMATION_PROMPT",
+
+      /**
        * Called to trigger a delayed request to check progress
        * delay is set in archiveProgressUpdateFailureInterval
        *
@@ -1077,8 +1373,14 @@ define([],function() {
        * @event
        * @property {string} itemKind The type of item for the form (e.g. "node")
        * @property {string} itemId The unique identifier for the item for the form (e.g. a NodeRef)
-       * @property {string} [formId] The unique identifier of the form to be retrieved
+       * @property {string} [formId=null] The unique identifier of the form to be retrieved
+       * @property {string} [alfDestination=null] A target NodeRef for the for data provided by the form
        * @property {string} mode The mode of form to retrieve (e.g. "view" or "edit")
+       * @property {object} [formConfig=null] Some optional configuration for the form
+       * @property {string} [formConfig.formId=null] The ID to give to the rendered form
+       * @property {object} [formConfig.formSubmissionPayloadMixin] Some additional data to include in the form submission
+       * @property {object} [formConfig.useDialog=null] Indicates whether or not the form should be displayed as a dialog
+       * @property {object} [formConfig.dialogTitle=null] The title for the dialog when a dialog is being used
        */
       REQUEST_FORM: "ALF_FORM_REQUEST",
 
@@ -1515,6 +1817,48 @@ define([],function() {
       TOGGLE_ON: "ALF_TOGGLE_ON",
 
       /**
+       * This topic is used by the [FormsRuntimeService]{@link module:alfresco/services/FormsRuntimeService}
+       * as a way of allowing other form controls (notably [Transitions]{@link module:alfresco/forms/controls/Transitions})
+       * to request that the form be published.
+       * 
+       * @instance
+       * @type {string}
+       * @default 
+       * @since 1.0.86
+       *
+       * @event
+       */
+      TRIGGER_FORM_SUBMISSION: "ALF_TRIGGER_FORM_SUBMISSION",
+
+      /**
+       * This topic can be published to request that the current user unfollow the users provided.
+       * 
+       * @instance
+       * @type {string}
+       * @default
+       * @since  1.0.86
+       *
+       * @event
+       * @property {string[]} userNames An array of the userNames of the users to unfollow.
+       */
+      UNFOLLOW_USERS: "ALF_UNFOLLOW_USERS",
+
+      /**
+       * This topic can be published to update the title and description of a Data List.
+       * 
+       * @instance
+       * @type {string}
+       * @default
+       * @since 1.0.85
+       *
+       * @event
+       * @property {string} nodeRef The NodeRef of the the Data List to update
+       * @property {string} title The new title of the Data List
+       * @property {string} description The new description of the Data List
+       */
+      UPDATE_DATA_LIST: "ALF_UPDATE_DATA_LIST",
+
+      /**
        * This can be published to change the current field being used to sort lists.
        * 
        * @instance
@@ -1621,6 +1965,21 @@ define([],function() {
        * @since 1.0.34
        */
       UPLOAD_TO_UNKNOWN_LOCATION: "ALF_UPLOAD_TO_UNKNOWN_LOCATION",
+
+      /**
+       * This topic can be published to request whether or not a particular site identifier
+       * (either the title or shortName) has already been used for a site.
+       * 
+       * @instance
+       * @type {string}
+       * @default
+       * @since 1.0.89
+       *
+       * @event
+       * @property {string} [shortName] The shortName to validate
+       * @property {string} [title] The title to validate
+       */
+      VALIDATE_SITE_IDENTIFIER: "ALF_VALIDATE_SITE_IDENTIFIER",
 
       /**
        * This topic is published to indicate that widget processing has been completed. It is typically

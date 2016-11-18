@@ -50,13 +50,13 @@ define(["dojo/_base/declare",
         "dojo/dom-class",
         "dojo/dom-construct",
         "dojo/dom-geometry",
-        "dojo/query",
         "dojo/dom-style",
         "dijit/registry",
-        "dijit/focus"],
+        "dijit/focus",
+        "jquery"],
         function(declare, _WidgetBase, _TemplatedMixin, ResizeMixin, _KeyNavContainer, KeyboardNavigationSuppressionMixin, template, _MultiItemRendererMixin,
-                 AlfCore, _LayoutMixin, WidgetsCreator, keys, on, lang, array, domAttr, domClass, domConstruct, domGeom, query, domStyle,
-                 registry, focusUtil) {
+                 AlfCore, _LayoutMixin, WidgetsCreator, keys, on, lang, array, domAttr, domClass, domConstruct, domGeom, domStyle,
+                 registry, focusUtil, $) {
 
    return declare([_WidgetBase, _TemplatedMixin, ResizeMixin, _KeyNavContainer, _MultiItemRendererMixin, KeyboardNavigationSuppressionMixin, AlfCore, _LayoutMixin], {
 
@@ -226,6 +226,31 @@ define(["dojo/_base/declare",
       thumbnailSize: null,
 
       /**
+       * Keeps tracks of the last set [expandedItemKey]{@link module:alfresco/lists/views/Grid#expandedItemKey}
+       * in order to allow the [expandedPanel]{@link module:alfresco/lists/views/Grid#expandedPanel} to be 
+       * re-expanded following a resize events that re-renders the data.
+       * 
+       * @instance
+       * @type {string}
+       * @default
+       * @since 1.0.83
+       */
+      _lastExpandedItemKey: null,
+
+      /**
+       * Logs the last requested widgets model provided in a call to 
+       * [expandedPanel]{@link module:alfresco/lists/views/Grid#expandedPanel} in order to be able to recreate
+       * the last [expandedPanel]{@link module:alfresco/lists/views/Grid#expandedPanel} following resize
+       * events.
+       * 
+       * @instance
+       * @type {object}
+       * @default
+       * @since 1.0.83
+       */
+      _lastExpandedWidgets: null,
+
+      /**
        * Calls [processWidgets]{@link module:alfresco/core/Core#processWidgets}
        *
        * @instance postCreate
@@ -352,6 +377,8 @@ define(["dojo/_base/declare",
 
                if (payload.widgets)
                {
+                  this._lastExpandedWidgets = payload.widgets;
+
                   var wc = new WidgetsCreator({ 
                      widgets: payload.widgets,
 
@@ -394,7 +421,7 @@ define(["dojo/_base/declare",
          {
             focusedChild.blur();
          }
-         domClass.remove(focusedChild.domNode.parentNode, "alfresco-lists-views-layouts-Grid__cell--focused");
+         (focusedChild.domNode && focusedChild.domNode.parentNode) && domClass.remove(focusedChild.domNode.parentNode, "alfresco-lists-views-layouts-Grid__cell--focused");
       },
 
       /**
@@ -540,8 +567,8 @@ define(["dojo/_base/declare",
             var marginBox = domGeom.getContentBox(node); // NOTE: Get the parent node for the size because the table will grow outside of its allotted area
             if (this.fixedColumns === true)
             {
-               var widthToSet = (Math.floor(marginBox.w / this.columns) - 4) + "px";
-               query("tr > td", node).forEach(lang.hitch(this, this.resizeCell, marginBox, widthToSet));
+               var widthToSet = (Math.floor(marginBox.w / this.columns) - 10) + "px";
+               $(node).find("tr > td").each(lang.hitch(this, this.resizeCell, marginBox, widthToSet));
             }
             else
             {
@@ -566,13 +593,16 @@ define(["dojo/_base/declare",
                      });
                      domConstruct.empty(this.containerNode);
                      
+                     this._lastExpandedItemKey = this.expandedItemKey;
+                     this.collapsePanel();
+
                      // Re-render the data for the new columns...
                      this.renderData();
                   }
 
                   // Resize the cells and widgets...
                   domStyle.set(this.domNode, "width", gridWidth + "px");
-                  query("tr > td", node).forEach(lang.hitch(this, this.resizeCell, marginBox, this.thumbnailSize + "px"));
+                  $(node).find("tr > td").each(lang.hitch(this, this.resizeCell, marginBox, this.thumbnailSize + "px"));
                }
             }
          }
@@ -587,7 +617,7 @@ define(["dojo/_base/declare",
        * @param {element} node The node to set width on
        * @param {number} index The current index of the element in the array
        */
-      resizeCell: function alfresco_lists_views_layouts_Grid__resizeCell(containerNodeMarginBox, widthToSet, node, /*jshint unused:false*/ index) {
+      resizeCell: function alfresco_lists_views_layouts_Grid__resizeCell(containerNodeMarginBox, widthToSet, index, node /*jshint unused:false*/) {
          if (!domClass.contains(node.parentNode, "alfresco-lists-views-layouts-Grid__expandedPanel"))
          {
             domStyle.set(node, {"width": widthToSet});
@@ -615,13 +645,16 @@ define(["dojo/_base/declare",
          var widget = registry.byNode(widgetNode);
          if (widget && typeof widget.resize === "function")
          {
-            widget.resize(dimensions);
+            widget.resize({
+               w: dimensions.w,
+               h: null
+            });
          }
          else
          {
             // See AKU-689 - resize the widgets DOM node and publish an event to indicate that it has been resized...
             domStyle.set(widget.domNode, "width", dimensions.w);
-            this.alfPublishResizeEvent(widget.domNode);
+            this.alfPublishResizeEvent(widget.domNode, true);
          }
       },
 
@@ -737,6 +770,17 @@ define(["dojo/_base/declare",
          if (lastColumn !== 0)
          {
             this.completeRow(lastColumn);
+         }
+
+         // If a panel was previously expanded before the data was re-rendered then we want to ensure that
+         // it is expanded again (see AKU-1054)
+         if (this._lastExpandedItemKey)
+         {
+            var payload = {
+               widgets: this._lastExpandedWidgets
+            };
+            payload[this.itemKeyProperty] = this._lastExpandedItemKey;
+            this.expandPanel(payload);
          }
          
          if(this.showNextLink &&

@@ -31,10 +31,12 @@ define(["dojo/_base/declare",
         "alfresco/core/ObjectTypeUtils",
         "alfresco/core/topics",
         "alfresco/enums/urlTypes",
+        "dojo/_base/array",
         "dojo/_base/lang",
         "alfresco/buttons/AlfButton",
         "service/constants/Default"],
-        function(declare, BaseService, CoreXhr, ObjectProcessingMixin, NotificationUtils, ObjectTypeUtils, topics, urlTypes, lang, AlfButton, AlfConstants) {
+        function(declare, BaseService, CoreXhr, ObjectProcessingMixin, NotificationUtils, ObjectTypeUtils, topics, 
+                 urlTypes, array, lang, AlfButton, AlfConstants) {
 
    return declare([BaseService, CoreXhr, ObjectProcessingMixin, NotificationUtils], {
 
@@ -45,6 +47,21 @@ define(["dojo/_base/declare",
        * @type {Array}
        */
       i18nRequirements: [{i18nFile: "./i18n/SiteService.properties"}],
+
+      /**
+       * This can be configured to be an array of additional site presets that will be 
+       * added to the default set (which will just be the "Collaboration Site"). Rather
+       * than configuring the [sitePresets]{@link module:alfresco/services/SiteService#sitePresets}
+       * it may be better to define additional presets. Each element in the array should be
+       * an object with "label" and "value" attributes where the value matches a preset
+       * configured in Share.
+       * 
+       * @instance
+       * @type {object[]}
+       * @default
+       * @since 1.0.95
+       */
+      additionalSitePresets: null,
 
       /**
        * Indicates whether or not the Site Service is running in legacy mode. When configured in this mode
@@ -63,14 +80,30 @@ define(["dojo/_base/declare",
       /**
        * This is an array of site preset options that will be displayed when creating a site (when the service
        * is not configured to be in [legacyMode]{@link module:alfresco/services/SiteService#legacyMode}). The
-       * default configuration just contains the "Collaboration Site", but this can be re-configured to contain
-       * additional site presets. Any additional presets must have values that map to presets in the Surf configuration.
+       * default configuration just contains the "Collaboration Site", but this can be overridden here. Any 
+       * presets must have values that map to presets in the Surf configuration. Note that 
+       * [additionalSitePresets]{@link module:alfresco/services/SiteService#additionalSitePresets} can be used
+       * to augment the default list rather than replacing it completely.
        * 
        * @instance
        * @type {object[]}
        * @since 1.0.55
        */
       sitePresets: null,
+
+      /**
+       * This can be configured to be a string array of the site preset values to be removed
+       * from both [sitePresets]{@link module:alfresco/services/SiteService#sitePresets} and
+       * [additionalSitePresets]{@link module:alfresco/services/SiteService#additionalSitePresets}.
+       * Note that unlike those attributes this is just a string array rather than an object
+       * array because only the site preset values (not labels) are matched.
+       *
+       * @instance
+       * @type {string[]}
+       * @default
+       * @since 1.0.95
+       */
+      sitePresetsToRemove: null,
 
       /**
        * The standard home page for a user
@@ -81,6 +114,18 @@ define(["dojo/_base/declare",
        * @since 1.0.39
        */
       userHomePage: "/dashboard",
+
+      /**
+       * The prefix to apply to site locations to complete the URL for site home pages. Prior to 
+       * version 5.1 of Share this would be "/dashboard" but from Share 5.1 onwards the site
+       * home page is configurable so should be configured to be the empty string.
+       *
+       * @instance
+       * @type {string}
+       * @default
+       * @since 1.0.95
+       */
+      siteHomePage: "/dashboard",
 
       /**
        * Ensures that default [sitePresets]{@link module:alfresco/services/SiteService#sitePresets} are configured
@@ -97,6 +142,22 @@ define(["dojo/_base/declare",
                { label: "create-site.dialog.type.collaboration", value: "site-dashboard" }
             ];
          }
+
+         if (this.additionalSitePresets && 
+             ObjectTypeUtils.isArray(this.additionalSitePresets) && 
+             this.additionalSitePresets.length)
+         {
+            this.sitePresets = this.sitePresets.concat(this.additionalSitePresets);
+         }
+
+         if (this.sitePresetsToRemove && this.sitePresetsToRemove.length)
+         {
+            this.sitePresets = array.filter(this.sitePresets, function(preset) {
+               return !array.some(this.sitePresetsToRemove, function(presetToRemove) {
+                  return preset.value === presetToRemove;
+               });
+            }, this);
+         }
       },
 
       /**
@@ -104,14 +165,20 @@ define(["dojo/_base/declare",
        *
        * @instance
        * @since 1.0.32
+       * @listens module:alfresco/core/topics#ADD_FAVOURITE_SITE
        * @listens module:alfresco/core/topics#BECOME_SITE_MANAGER
        * @listens module:alfresco/core/topics#CREATE_SITE
        * @listens module:alfresco/core/topics#DELETE_SITE
        * @listens module:alfresco/core/topics#EDIT_SITE
+       * @listens module:alfresco/core/topics#GET_FAVOURITE_SITES
+       * @listens module:alfresco/core/topics#GET_RECENT_SITES
+       * @listens module:alfresco/core/topics#GET_SITES
+       * @listens module:alfresco/core/topics#GET_USER_SITES
        * @listens module:alfresco/core/topics#SITE_CREATION_REQUEST
+       * @listens module:alfresco/core/topics#VALIDATE_SITE_IDENTIFIER
        */
       registerSubscriptions: function alfresco_services_SiteService__registerSubscriptions() {
-         this.alfSubscribe("ALF_GET_SITES", lang.hitch(this, this.getSites));
+         this.alfSubscribe(topics.GET_SITES, lang.hitch(this, this.getSites));
          this.alfSubscribe("ALF_GET_SITES_ADMIN", lang.hitch(this, this.getAdminSites));
          this.alfSubscribe("ALF_GET_SITE_MEMBERSHIPS", lang.hitch(this, this.getSiteMemberships));
          this.alfSubscribe("ALF_GET_SITE_DETAILS", lang.hitch(this, this.getSiteDetails));
@@ -126,11 +193,15 @@ define(["dojo/_base/declare",
          this.alfSubscribe(topics.EDIT_SITE, lang.hitch(this, this.editSite));
          this.alfSubscribe(topics.SITE_EDIT_REQUEST, lang.hitch(this, this.editEditSiteData));
          this.alfSubscribe(topics.DELETE_SITE, lang.hitch(this, this.onActionDeleteSite));
-         this.alfSubscribe("ALF_ADD_FAVOURITE_SITE", lang.hitch(this, this.addSiteAsFavourite));
+         this.alfSubscribe(topics.ADD_FAVOURITE_SITE, lang.hitch(this, this.addSiteAsFavourite));
          this.alfSubscribe("ALF_REMOVE_FAVOURITE_SITE", lang.hitch(this, this.removeSiteFromFavourites));
-         this.alfSubscribe("ALF_GET_RECENT_SITES", lang.hitch(this, this.getRecentSites));
-         this.alfSubscribe("ALF_GET_FAVOURITE_SITES", lang.hitch(this, this.getFavouriteSites));
+         this.alfSubscribe(topics.GET_RECENT_SITES, lang.hitch(this, this.getRecentSites));
+         this.alfSubscribe(topics.GET_FAVOURITE_SITES, lang.hitch(this, this.getFavouriteSites));
          this.alfSubscribe(topics.CANCEL_JOIN_SITE_REQUEST, lang.hitch(this, this.cancelJoinSiteRequest));
+         this.alfSubscribe(topics.GET_USER_SITES, lang.hitch(this, this.getUserSites));
+         this.alfSubscribe(topics.ENABLE_SITE_ACTIVITY_FEED, lang.hitch(this, this.enableSiteActivityFeed));
+         this.alfSubscribe(topics.DISABLE_SITE_ACTIVITY_FEED, lang.hitch(this, this.disableSiteActivityFeed));
+         this.alfSubscribe(topics.VALIDATE_SITE_IDENTIFIER, lang.hitch(this, this.validateSiteIdentifier));
 
          // Make sure that the edit-site.js file is loaded. This is required for as it handles legacy site
          // editing. At some stage this will not be needed when a new edit site dialog is provided.
@@ -141,6 +212,55 @@ define(["dojo/_base/declare",
       },
 
       /**
+       * Handles requests to enable the activity feed for a site (for the current user).
+       * 
+       * @instance
+       * @param {object} payload The details of the site to enable the feed for
+       * @instance 1.0.87
+       */
+      enableSiteActivityFeed: function alfresco_services_SiteService__enableSiteActivityFeed(payload) {
+         if (payload.siteId)
+         {
+            var config = {
+               url: AlfConstants.PROXY_URI + "api/activities/feed/control?s=" + payload.siteId,
+               method: "DELETE"
+            };
+            this.mergeTopicsIntoXhrPayload(payload, config);
+            this.serviceXhr(config);
+         }
+         else
+         {
+            this.alfLog("warn", "A request was made to enable the activity feed for a site, but no 'siteId' attribute was provided", payload, this);
+         }
+      },
+
+      /**
+       * Handles requests to disable the activity feed for a site (for the current user).
+       * 
+       * @instance
+       * @param {object} payload The details of the site to disable the feed for
+       * @instance 1.0.87
+       */
+      disableSiteActivityFeed: function alfresco_services_SiteService__disableSiteActivityFeed(payload) {
+         if (payload.siteId)
+         {
+            var config = {
+               url: AlfConstants.PROXY_URI + "api/activities/feed/control",
+               method: "POST",
+               data: {
+                  siteId: payload.siteId
+               }
+            };
+            this.mergeTopicsIntoXhrPayload(payload, config);
+            this.serviceXhr(config);
+         }
+         else
+         {
+            this.alfLog("warn", "A request was made to disable the activity feed for a site, but no 'siteId' attribute was provided", payload, this);
+         }
+      },
+
+      /**
        *
        * @instance
        * @param {object} payload The details of the request
@@ -148,11 +268,107 @@ define(["dojo/_base/declare",
       getSites: function alfresco_services_SiteService__getSites(payload) {
          // TODO: Clean this up. Choose on or other as the Aikau standard.
          var alfResponseTopic = payload.alfResponseTopic || payload.responseTopic;
-         this.serviceXhr({
+         var config = {
             url: AlfConstants.PROXY_URI + "api/sites",
             method: "GET",
             alfTopic: alfResponseTopic
-         });
+         };
+         this.serviceXhr(config);
+      },
+
+      /**
+       * 
+       * @instance
+       * @param  {payload} payload The details of the user to retrieve sites for
+       * @since 1.0.87
+       */
+      getUserSites: function alfresco_services_SiteService__getSites(payload) {
+         if (payload.userName)
+         {
+            var config = {
+               url: AlfConstants.PROXY_URI + "api/people/admin/sites",
+               method: "GET",
+               successCallback: this.onUserSitesSuccess,
+               failureCallback: this.onUserSitesFailure,
+               callbackScope: this
+            };
+            this.mergeTopicsIntoXhrPayload(payload, config);
+            this.serviceXhr(config);
+         }
+         else
+         {
+            this.alfLog("warn", "A request was made to get the sites for a user but no 'userName' attribute was provided", payload, this);
+         }
+      },
+
+      /**
+       * Handles successful requests to get users filtered by the supplied user name. Makes an additional
+       * XHR request to determine whether or not the user is being followed by the current user.
+       * 
+       * @instance
+       * @param {object} response The response from the request
+       * @param {object} originalRequestConfig The configuration passed on the original request
+       * @since 1.0.86
+       */
+      onUserSitesSuccess: function alfresco_services_SiteService__onUserSitesSuccess(response, originalRequestConfig) {
+         var url = AlfConstants.PROXY_URI + "api/activities/feed/controls";
+         var config = {
+            url: url,
+            sitesData: response,
+            initialRequestConfig: originalRequestConfig,
+            method: "GET",
+            successCallback: this.publishSites,
+            callbackScope: this
+         };
+         this.serviceXhr(config);
+      },
+
+      /**
+       * This is the success callback for [getUserSites]{@link module:alfresco/services/SiteService#getUserSites}.
+       * 
+       * @instance
+       * @param {object} response The response from the request
+       * @param {object} originalRequestConfig The configuration passed on the original request
+       * @since 1.0.86
+       */
+      publishSites: function alfresco_services_SiteService__publishSites(response, originalRequestConfig) {
+         var sites = originalRequestConfig.sitesData;
+         
+         // Update the site data with the activity feed control data...
+         sites = array.map(sites, function(site) {
+            site.activityFeedEnabled = true;
+            if (site.shortName)
+            {
+               site.activityFeedEnabled = !array.some(response, function(feedControl) {
+                  return feedControl.siteId === site.shortName;
+               });
+               return site;
+            }
+         }, this);
+
+         var topic = lang.getObject("initialRequestConfig.alfSuccessTopic", false, originalRequestConfig);
+         if (!topic)
+         {
+            topic = lang.getObject("initialRequestConfig.alfResponseTopic", false, originalRequestConfig);
+         }
+         if (topic)
+         {
+            this.alfPublish(topic, {
+               items: sites
+            });
+         }
+      },
+
+      /**
+       * This is the failure callback for [getUserSites]{@link module:alfresco/services/SiteService#getUserSites}.
+       * 
+       * @instance
+       * @param {object} response The response from the request
+       * @param {object} originalRequestConfig The configuration passed on the original request
+       * @since 1.0.87
+       */
+      onUserSitesFailure: function alfresco_services_UserService__onUserSitesFailure(response, originalRequestConfig) {
+         this.alfLog("error", "It was not possible to retrieve the sites for a user", response, originalRequestConfig, this);
       },
 
       /**
@@ -709,7 +925,7 @@ define(["dojo/_base/declare",
        * @param {object} payload The payload published with the request to create a site
        * @fires module:alfresco/core/topics#CREATE_FORM_DIALOG
        */
-      createSite: function alfresco_services_SiteService__editSite(config) {
+      createSite: function alfresco_services_SiteService__createSite(config) {
          this.alfLog("log", "A request has been made to create a site: ", config);
          if (this.legacyMode)
          {
@@ -730,10 +946,15 @@ define(["dojo/_base/declare",
             this.alfServicePublish(topics.CREATE_FORM_DIALOG, {
                dialogId: "CREATE_SITE_DIALOG",
                dialogTitle: "create-site.dialog.title",
+               dialogConfirmationButtonTitle: "create-site-dialog.name.create.label",
                dialogCloseTopic: topics.SITE_CREATION_SUCCESS,
+               contentHeight: "500px",
                formSubmissionTopic: topics.SITE_CREATION_REQUEST,
                formSubmissionGlobal: true,
                showValidationErrorsImmediately: false,
+               customFormConfig: {
+                  publishValueSubscriptions: [topics.ENTER_KEY_PRESSED]
+               },
                widgets: dialogWidgets
             });
          }
@@ -757,17 +978,12 @@ define(["dojo/_base/declare",
                message: this.message("create-site.creating")
             });
 
-            var visibility = payload.visibility;
-            if (visibility === "PUBLIC" && payload.moderated)
-            {
-               visibility = "MODERATED";
-            }
             var url = AlfConstants.URL_SERVICECONTEXT + "modules/create-site";
             this.serviceXhr({
                url : url,
                method: "POST",
                data: {
-                  visibility: visibility,
+                  visibility: payload.visibility,
                   title: payload.title,
                   shortName: payload.shortName,
                   description: payload.description || "",
@@ -792,10 +1008,26 @@ define(["dojo/_base/declare",
        * @param  {object} response The response from the request to create the site
        * @param  {object} originalRequestConfig The configuration for the request to create the site
        * @since 1.0.55
+       * @fires module:alfresco/core/topics#ADD_FAVOURITE_SITE
        * @fires module:alfresco/core/topics#SITE_CREATION_SUCCESS
        * @fires module:alfresco/core/topics#NAVIGATE_TO_PAGE
        */
       onSiteCreationSuccess: function alfresco_services_SiteService__onSiteCreationSuccess(/*jshint unused:false*/ response, originalRequestConfig) {
+         // See AKU-1108 - Need to ensure that favourite is added before navigating to the new page...
+         //                Intentionally not cleaning up subscription because page will change...
+         this.alfSubscribe("ALF_FAVOURITE_SITE_ADDED", lang.hitch(this, function() {
+            this.alfServicePublish(topics.SITE_CREATION_SUCCESS);
+            this.alfServicePublish(topics.NAVIGATE_TO_PAGE, {
+               url: "site/" + originalRequestConfig.data.shortName + "/dashboard"
+            });
+         }));
+
+         // Mark the new site as a favourite...
+         this.alfServicePublish(topics.ADD_FAVOURITE_SITE, {
+            site: originalRequestConfig.data.shortName,
+            user: AlfConstants.USERNAME
+         });
+
          this.alfServicePublish(topics.SITE_CREATION_SUCCESS);
          this.alfServicePublish(topics.NAVIGATE_TO_PAGE, {
             url: "site/" + originalRequestConfig.data.shortName + "/dashboard"
@@ -869,21 +1101,15 @@ define(["dojo/_base/declare",
        */
       showEditSiteDialog: function alfresco_services_SiteService__showEditSiteDialog(response, originalRequestConfig) {
          // Check that the resposne is the expected siteData...
-         var shortName = lang.getObject("shortName", false, response);
          if (response)
          {
-            // Set the moderated and visibility attributes appropriately...
-            response.moderated = response.visibility === "MODERATED";
-            if (response.moderated)
-            {
-               response.visibility = "PUBLIC";
-            }
-
+            var shortName = lang.getObject("shortName", false, response);
             var dialogWidgets = lang.clone(this.widgetsForEditSiteDialog);
             this.processObject(["processInstanceTokens"], dialogWidgets);
             this.alfServicePublish(topics.CREATE_FORM_DIALOG, {
                dialogId: "EDIT_SITE_DIALOG",
                dialogTitle: "edit-site.dialog.title",
+               dialogConfirmationButtonTitle: "edit-site-dialog.name.save.label",
                dialogCloseTopic: topics.SITE_EDIT_SUCCESS,
                formSubmissionTopic: topics.SITE_EDIT_REQUEST,
                formSubmissionPayloadMixin: {
@@ -892,10 +1118,16 @@ define(["dojo/_base/declare",
                formSubmissionGlobal: true,
                formValue: response,
                showValidationErrorsImmediately: false,
+               customFormConfig: {
+                  publishValueSubscriptions: [topics.ENTER_KEY_PRESSED]
+               },
                widgets: dialogWidgets
             });
          }
-         this.alfLog("warn", "It was not possible to retrieve the current site data for editing", response, originalRequestConfig, this);
+         else
+         {
+            this.alfLog("warn", "It was not possible to retrieve the current site data for editing", response, originalRequestConfig, this);
+         }
       },
 
       /**
@@ -915,17 +1147,12 @@ define(["dojo/_base/declare",
                message: this.message("edit-site.saving")
             });
 
-            var visibility = payload.visibility;
-            if (visibility === "PUBLIC" && payload.moderated)
-            {
-               visibility = "MODERATED";
-            }
             var url = AlfConstants.PROXY_URI + "api/sites/" + payload.shortName;
             this.serviceXhr({
                url : url,
                method: "PUT",
                data: {
-                  visibility: visibility,
+                  visibility: payload.visibility,
                   title: payload.title,
                   shortName: payload.shortName,
                   description: payload.description || ""
@@ -954,7 +1181,7 @@ define(["dojo/_base/declare",
       onSiteEditSuccess: function alfresco_services_SiteService__onSiteEditSuccess(/*jshint unused:false*/ response, originalRequestConfig) {
          this.alfServicePublish(topics.SITE_EDIT_SUCCESS);
          this.alfServicePublish(topics.NAVIGATE_TO_PAGE, {
-            url: "site/" + originalRequestConfig.data.shortName + "/dashboard"
+            url: "site/" + originalRequestConfig.data.shortName + this.siteHomePage
          });
       },
 
@@ -1125,7 +1352,7 @@ define(["dojo/_base/declare",
          {
             url = url + "/site/" + this.currentSite;
          }
-         var alfTopic = payload.alfResponseTopic || "ALF_GET_RECENT_SITES";
+         var alfTopic = payload.alfResponseTopic || topics.GET_RECENT_SITES;
          var config = {
             alfTopic: alfTopic,
             url: url,
@@ -1147,7 +1374,7 @@ define(["dojo/_base/declare",
          {
             url = url + "/site/" + this.currentSite;
          }
-         var alfTopic = payload.alfResponseTopic || "ALF_GET_FAVOURITE_SITES";
+         var alfTopic = payload.alfResponseTopic || topics.GET_FAVOURITE_SITES;
          var config = {
             alfTopic: alfTopic,
             url: url,
@@ -1155,6 +1382,33 @@ define(["dojo/_base/declare",
             callbackScope: this
          };
          this.serviceXhr(config);
+      },
+
+      /**
+       * Handles requests to validate whether or not a suggested site title or shortName has
+       * already been used.
+       *
+       * @instance
+       * @param {object} payload
+       * @since 1.0.89
+       */
+      validateSiteIdentifier: function alfresco_services_SiteService__validateSiteIdentifier(payload) {
+         var url = AlfConstants.PROXY_URI + "slingshot/site-identifier-used?";
+         if (typeof payload.title === "undefined" && typeof payload.shortName === "undefined")
+         {
+            this.alfLog("warn", "A request was made to validate site identification but neither 'title' nor 'shortName' was provided", payload, this);
+         }
+         else
+         {
+            url += payload.shortName ? ("shortName=" + encodeURIComponent(payload.shortName)) : ("title=" + encodeURIComponent(payload.title));
+            var config = {
+               url: url,
+               method: "GET",
+               callbackScope: this
+            };
+            this.mergeTopicsIntoXhrPayload(payload, config);
+            this.serviceXhr(config);
+         }
       },
 
       /**
@@ -1166,12 +1420,25 @@ define(["dojo/_base/declare",
        */
       widgetsForCreateSiteDialog: [
          {
+            id: "CREATE_SITE_FIELD_PRESET",
+            name: "alfresco/forms/controls/Select",
+            config: {
+               fieldId: "PRESET",
+               label: "create-site.dialog.type.label",
+               name: "sitePreset",
+               optionsConfig: {
+                  fixed: "{sitePresets}"
+               }
+            }
+         },
+         {
             id: "CREATE_SITE_FIELD_TITLE",
             name: "alfresco/forms/controls/TextBox",
             config: {
                fieldId: "TITLE",
                label: "create-site.dialog.name.label",
                name: "title",
+               trimValue: true,
                requirementConfig: {
                   initialValue: true
                },
@@ -1180,6 +1447,16 @@ define(["dojo/_base/declare",
                      validation: "maxLength",
                      length: 256,
                      errorMessage: "create-site.dialog.name.maxLength"
+                  },
+                  {
+                     scopeValidation: true,
+                     warnOnly: true,
+                     validation: "validationTopic",
+                     validationTopic: topics.VALIDATE_SITE_IDENTIFIER,
+                     validationValueProperty: "title",
+                     negate: true,
+                     validationResultProperty: "response.used",
+                     errorMessage: "create-site-dialog.title.already.used"
                   }
                ]
             }
@@ -1201,6 +1478,7 @@ define(["dojo/_base/declare",
                      flags: "g"
                   }
                ],
+               trimValue: true,
                label: "create-site.dialog.urlname.label",
                description: "create-site.dialog.urlname.description",
                name: "shortName",
@@ -1217,6 +1495,15 @@ define(["dojo/_base/declare",
                      validation: "regex",
                      regex: "^[0-9a-zA-Z-]+$",
                      errorMessage: "create-site.dialog.urlname.regex"
+                  },
+                  {
+                     scopeValidation: true,
+                     validation: "validationTopic",
+                     validationTopic: topics.VALIDATE_SITE_IDENTIFIER,
+                     validationValueProperty: "shortName",
+                     negate: true,
+                     validationResultProperty: "response.used",
+                     errorMessage: "create-site-dialog.name.already.used"
                   }
                ]
             }
@@ -1238,18 +1525,6 @@ define(["dojo/_base/declare",
             }
          },
          {
-            id: "CREATE_SITE_FIELD_PRESET",
-            name: "alfresco/forms/controls/Select",
-            config: {
-               fieldId: "PRESET",
-               label: "create-site.dialog.type.label",
-               name: "sitePreset",
-               optionsConfig: {
-                  fixed: "{sitePresets}"
-               }
-            }
-         },
-         {
             id: "CREATE_SITE_FIELD_VISIBILITY",
             name: "alfresco/forms/controls/RadioButtons",
             config: {
@@ -1258,25 +1533,20 @@ define(["dojo/_base/declare",
                name: "visibility",
                optionsConfig: {
                   fixed: [
-                     { label: "create-site.dialog.visibility.public", value: "PUBLIC" },
-                     { label: "create-site.dialog.visibility.private", value: "PRIVATE" }
-                  ]
-               }
-            }
-         },
-         {
-            id: "CREATE_SITE_FIELD_MODERATED",
-            name: "alfresco/forms/controls/CheckBox",
-            config: {
-               fieldId: "MODERATED",
-               label: "create-site.dialog.moderated.label",
-               description: "create-site.dialog.moderated.description",
-               name: "moderated",
-               visibilityConfig: {
-                  rules: [
-                     {
-                        targetId: "VISIBILITY",
-                        is: ["PUBLIC"]
+                     { 
+                        label: "create-site.dialog.visibility.public", 
+                        description: "create-site.dialog.visibility.public.description",
+                        value: "PUBLIC" 
+                     },
+                     { 
+                        label: "create-site.dialog.visibility.moderated", 
+                        description: "create-site.dialog.visibility.moderated.description",
+                        value: "MODERATED" 
+                     },
+                     { 
+                        label: "create-site.dialog.visibility.private",  
+                        description: "create-site.dialog.visibility.private.description",
+                        value: "PRIVATE" 
                      }
                   ]
                }
@@ -1307,6 +1577,17 @@ define(["dojo/_base/declare",
                      validation: "maxLength",
                      length: 256,
                      errorMessage: "create-site.dialog.name.maxLength"
+                  },
+                  {
+                     scopeValidation: true,
+                     warnOnly: true,
+                     validation: "validationTopic",
+                     validationTopic: topics.VALIDATE_SITE_IDENTIFIER,
+                     validationValueProperty: "title",
+                     negate: true,
+                     validateInitialValue: false,
+                     validationResultProperty: "response.used",
+                     errorMessage: "create-site-dialog.title.already.used"
                   }
                ]
             }
@@ -1336,25 +1617,20 @@ define(["dojo/_base/declare",
                name: "visibility",
                optionsConfig: {
                   fixed: [
-                     { label: "create-site.dialog.visibility.public", value: "PUBLIC" },
-                     { label: "create-site.dialog.visibility.private", value: "PRIVATE" }
-                  ]
-               }
-            }
-         },
-         {
-            id: "EDIT_SITE_FIELD_MODERATED",
-            name: "alfresco/forms/controls/CheckBox",
-            config: {
-               fieldId: "MODERATED",
-               label: "create-site.dialog.moderated.label",
-               description: "create-site.dialog.moderated.description",
-               name: "moderated",
-               visibilityConfig: {
-                  rules: [
-                     {
-                        targetId: "VISIBILITY",
-                        is: ["PUBLIC"]
+                     { 
+                        label: "create-site.dialog.visibility.public", 
+                        description: "create-site.dialog.visibility.public.description",
+                        value: "PUBLIC" 
+                     },
+                     { 
+                        label: "create-site.dialog.visibility.moderated", 
+                        description: "create-site.dialog.visibility.moderated.description",
+                        value: "MODERATED" 
+                     },
+                     { 
+                        label: "create-site.dialog.visibility.private",  
+                        description: "create-site.dialog.visibility.private.description",
+                        value: "PRIVATE" 
                      }
                   ]
                }

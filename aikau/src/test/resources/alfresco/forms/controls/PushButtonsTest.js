@@ -27,6 +27,27 @@ define(["module",
         "intern/dojo/node!leadfoot/keys"],
         function(module, defineSuite, assert, TestCommon, keys) {
 
+   var buttonSelectors = TestCommon.getTestSelectors("alfresco/buttons/AlfButton");
+   var checkBoxSelectors = TestCommon.getTestSelectors("alfresco/forms/controls/CheckBox");
+   var dialogSelectors = TestCommon.getTestSelectors("alfresco/dialogs/AlfDialog");
+   var selectors = {
+      buttons: {
+         openDialog: TestCommon.getTestSelector(buttonSelectors, "button.label", ["CREATE_DIALOG"])
+      },
+      checkBoxes: {
+         toggleDisableState: {
+            checkBox: TestCommon.getTestSelector(checkBoxSelectors, "checkbox", ["TOGGLE_DISABLE_STATE"])
+         }
+      },
+      dialogs: {
+         form: {
+            confirmationButton: TestCommon.getTestSelector(dialogSelectors, "form.dialog.confirmation.button", ["PUSH_BUTTONS_DIALOG"]),
+            displayed: TestCommon.getTestSelector(dialogSelectors, "visible.dialog", ["PUSH_BUTTONS_DIALOG"]),
+            hidden: TestCommon.getTestSelector(dialogSelectors, "hidden.dialog", ["PUSH_BUTTONS_DIALOG"]),
+         }
+      }
+   };
+
    defineSuite(module, {
       name: "PushButtons Tests",
       testPage: "/PushButtons",
@@ -35,7 +56,7 @@ define(["module",
          return this.remote.findByCssSelector("#LEFT_FORM .confirmationButton .dijitButtonNode")
             .clearLog()
             .click()
-            .end()
+         .end()
 
          .getLastPublish("SCOPED_POST_FORM", true)
             .then(function(payload) {
@@ -50,20 +71,20 @@ define(["module",
       "Value can be updated by publish": function() {
          return this.remote.findById("CANT_BUILD_VALUE")
             .click()
-            .end()
+         .end()
 
          .findById("RUGBY_UNION_VALUE")
             .click()
-            .end()
+         .end()
 
          .findById("VB_VALUE")
             .click()
-            .end()
+         .end()
 
          .findByCssSelector("#LEFT_FORM .confirmationButton .dijitButtonNode")
             .clearLog()
             .click()
-            .end()
+         .end()
 
          .getLastPublish("SCOPED_POST_FORM", true)
             .then(function(payload) {
@@ -77,25 +98,25 @@ define(["module",
       "Keyboard navigation and selection is supported on single-value controls": function() {
          return this.remote.findById("VB_VALUE") // Focus on last button at top
             .click()
-            .end()
+         .end()
 
          .pressKeys(keys.TAB) // Tab to "canbuild" control
             .pressKeys(keys.ARROW_LEFT)
             .pressKeys(keys.SPACE)
-            .end()
+         .end()
 
          .pressKeys(keys.TAB) // Tab to "properfootball" control, first value
             .pressKeys(keys.SPACE)
-            .end()
+         .end()
 
          .pressKeys(keys.TAB) // Tab to "properfootball" control, second value
             .pressKeys(keys.SPACE)
-            .end()
+         .end()
 
          .findByCssSelector("#LEFT_FORM .confirmationButton .dijitButtonNode")
             .clearLog()
             .click()
-            .end()
+         .end()
 
          .getLastPublish("SCOPED_POST_FORM", true)
             .then(function(payload) {
@@ -108,12 +129,12 @@ define(["module",
       "Can select push button with mouse": function() {
          return this.remote.findByCssSelector("#BEST_LANGUAGE_CONTROL label:nth-of-type(2)")
             .click()
-            .end()
+         .end()
 
          .findByCssSelector("#LEFT_FORM .confirmationButton .dijitButtonNode")
             .clearLog()
             .click()
-            .end()
+         .end()
 
          .getLastPublish("SCOPED_POST_FORM", true)
             .then(function(payload) {
@@ -125,7 +146,7 @@ define(["module",
          return this.remote.findByCssSelector("#RIGHT_FORM .confirmationButton .dijitButtonNode")
             .clearLog()
             .click()
-            .end()
+         .end()
 
          .getLastPublish("SCOPED_POST_FORM", true)
             .then(function(payload) {
@@ -134,20 +155,71 @@ define(["module",
 
          .findByCssSelector("#ONE_DESELECTABLE_CHOICE_CONTROL label:nth-of-type(1)")
             .click()
-            .end()
+         .end()
 
          .findByCssSelector("#ONE_DESELECTABLE_CHOICE_CONTROL label:nth-of-type(2)")
             .click()
-            .end()
+         .end()
 
          .findByCssSelector("#RIGHT_FORM .confirmationButton .dijitButtonNode")
             .clearLog()
             .click()
-            .end()
+         .end()
 
          .getLastPublish("SCOPED_POST_FORM", true)
             .then(function(payload) {
                assert.sameMembers(payload.onedeselectable, ["two"], "Modified state of radio-checkbox invalid");
+            });
+      },
+
+      "Disabled control cannot be used": function() {
+         return this.remote.findByCssSelector("#DISABLED_CONTROL label:nth-of-type(1)")
+            .clearLog()
+            .click()
+         .end()
+
+         .getAllPublishes("SCOPED__valueChangeOf_DISABLED")
+            .then(function(payloads) {
+               assert.lengthOf(payloads, 0);
+            });
+      },
+
+      "Enabled control cannot be used": function() {
+         return this.remote.findByCssSelector(selectors.checkBoxes.toggleDisableState.checkBox)
+            .click()
+         .end()
+
+         .findByCssSelector("#DISABLED_CONTROL label:nth-of-type(1)")
+            .clearLog()
+            .click()
+         .end()
+
+         .getAllPublishes("SCOPED__valueChangeOf_DISABLED")
+            .then(function(payloads) {
+               assert.lengthOf(payloads, 1);
+            });
+      },
+
+      "No buttons label displayed": function() {
+         return this.remote.findByCssSelector("#NO_OPTIONS_CONTROL .alfresco-forms-controls-PushButtons__noOptionsLabel")
+            .getVisibleText()
+            .then(function(text) {
+               assert.equal(text, "No buttons available");
+            });
+      },
+
+      "Check control width in dialog": function() {
+         return this.remote.findByCssSelector(selectors.buttons.openDialog)
+            .click()
+         .end()
+
+         .findByCssSelector(selectors.dialogs.form.displayed)
+         .end()
+
+         .findDisplayedByCssSelector("#DPB_2 .control-row")
+            .getSize()
+            .then(function(size) {
+               assert.closeTo(size.width, 606, 5);
             });
       }
    });

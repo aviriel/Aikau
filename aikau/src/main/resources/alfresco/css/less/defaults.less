@@ -9,6 +9,8 @@
 @alternate-background-color: #ccc;
 @alternate-font-color: @primary-font-color;
 
+@text-highlight-color: #ffd180;
+
 // Header widget colours
 // These are used for the "alfresco/header" packaged widgets which are primarily extensions
 // to the "alfresco/menus" widgets. You can override these variables to make theme specific header
@@ -40,6 +42,7 @@
 @large-font-size: 16px;
 @normal-font-size: 13px;
 @small-font-size: 12px;
+@very-small-font-size: 10px;
 @footer-font-size: 8.11px;
 
 // Font families
@@ -87,12 +90,17 @@
 // Used for dialog label width area
 @dialog-label-section: 160px;
 @dialog-control-section: 530px;
+// The minimum width of a dialog (unless overridden in the request to the DialogService)
+@dialog-min-width: 580px;
 
 // Font Colours
 @general-font-color: #333;
 @emphasized-font-color: #000;
 @de-emphasized-font-color: #767676;
 @highlighted-font-color: #fff;
+
+@validation-error-font-color: #ed2525;
+@validation-warning-font-color: darkorange;
 
 // Link colours and decoration
 @link-font-color: @general-font-color;
@@ -107,6 +115,8 @@
 @link-title-font-color-hover: @link-title-font-color;
 @link-title-text-decoration-hover: @link-title-text-decoration;
 
+// When a form field is disabled, this opacity will be applied to it...
+@disabled-form-field-opacity: 0.35;
 
 // Borders...
 // These have been initially added for form controls...
@@ -323,6 +333,7 @@
 @tab-color-active: #fff;
 @tab-border-radius: 2px 2px 0 0;
 @tab-opacity-disabled: .5;
+@tab-padding: 10px;
 
 // Breadcrumbs
 @breadcrumb-font-color: @general-font-color;

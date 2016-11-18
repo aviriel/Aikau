@@ -246,15 +246,6 @@ define(["dojo/_base/declare",
       name: "",
 
       /**
-       * The value to submit as the value of the field when the form is submitted.
-       *
-       * @instance
-       * @type {string}
-       * @default
-       */
-      value: "",
-
-      /**
        * The list of static options (TODO: We need to provide support for dynamic options via XHR or callback).
        *
        * @instance
@@ -262,6 +253,26 @@ define(["dojo/_base/declare",
        * @default
        */
       options: null,
+
+      /**
+       * Indicates whether or not values should be trimmed of whitespace (this only applies to 
+       * values that are strings).
+       * 
+       * @instance
+       * @type {boolean}
+       * @default
+       * @since 1.0.94
+       */
+      trimValue: false,
+
+      /**
+       * The value to submit as the value of the field when the form is submitted.
+       *
+       * @instance
+       * @type {string}
+       * @default
+       */
+      value: "",
 
       /**
        * By default if a field is hidden or disabled then it's value should not be posted. This allows multiple controls
@@ -324,6 +335,81 @@ define(["dojo/_base/declare",
        * @since 1.0.65
        */
       supportsMultiValue: false,
+
+      /**
+       * Indicates whether values should be set as separate properties for the files added and removed 
+       * (from the initial state) rather than just a single value representing the files selected.
+       * 
+       * @instance
+       * @type {boolean}
+       * @default
+       * @since 1.0.82
+       */
+      addedAndRemovedValues: false,
+
+      /**
+       * The suffix added to the form control [name]{@link module:alfresco/forms/controls/BaseFormControl#name}
+       * when [addedAndRemovedValues]{@link module:alfresco/forms/controls/FilePicker#addedAndRemovedValues}
+       * is configured to be true. The concatenated value is then used as the property for the files
+       * that have been added to the form controls initial value.
+       * 
+       * @instance
+       * @type {boolean}
+       * @default
+       * @since 1.0.82
+       */
+      addedNameSuffix: "_added",
+
+      /**
+       * The suffix added to the form control [name]{@link module:alfresco/forms/controls/BaseFormControl#name}
+       * when [addedAndRemovedValues]{@link module:alfresco/forms/controls/FilePicker#addedAndRemovedValues}
+       * is configured to be true. The concatenated value is then used as the property for the files
+       * that have been removed from the form controls initial value.
+       * 
+       * @instance
+       * @type {boolean}
+       * @default
+       * @since 1.0.82
+       */
+      removedNameSuffix: "_removed",
+
+      /**
+       * An optional token that can be provided for splitting the supplied value. This should be configured
+       * when the value is provided as a string that needs to be converted into an array.
+       * 
+       * @instance
+       * @type {string}
+       * @default
+       * @since 1.0.82
+       */
+      valueDelimiter: null,
+
+      /**
+       * This indicates whether or not the validation elements are hidden (for example the invalid
+       * field indicator and any validation messages). This would typically be used for form dialogs
+       * where the fields have no label.
+       *
+       * @instance
+       * @type {boolean}
+       * @default
+       * @since 1.0.84
+       */
+      hideValidation: false,
+
+      /**
+       * This attribute has been added to retain backwards compatibility with regards to validation
+       * of invisible fields. Fields that are invisible are not validated by default but it may be
+       * necessary to validate hidden fields that are progressively disclosed. The use case for this
+       * addition was the implementation of the Cloud Sync capabilities that required a form to be
+       * disabled until a path was selected (but the path field was hidden until a network and
+       * site were selected).
+       * 
+       * @instance
+       * @type {boolean}
+       * @default
+       * @since 1.0.94
+       */
+      validateWhenHidden: false,
 
       /**
        * The default visibility status is always true (this can be overridden by extending controls).
@@ -418,6 +504,18 @@ define(["dojo/_base/declare",
          {
             this.wrappedWidget.set("disabled", status);
          }
+         if (this.domNode)
+         {
+            if (status)
+            {
+               domClass.add(this.domNode, "alfresco-forms-controls-BaseFormControl--disabled");
+            }
+            else
+            {
+               domClass.remove(this.domNode, "alfresco-forms-controls-BaseFormControl--disabled");
+            }
+         }
+         
          this.validate();
       },
 
@@ -526,6 +624,13 @@ define(["dojo/_base/declare",
             // Process the configuration...
             this.processConfig(instanceVar, config);
          }
+         else if (config.copyRule && config.copyRule.targetId)
+         {
+            var topic = "_valueChangeOf_" + config.copyRule.targetId;
+            this.alfSubscribe(topic, lang.hitch(this, function(payload) {
+               this.setValue(payload.value);
+            }));
+         }
          else
          {
             this.alfLog("warn", "An autoset configuration element was provided without both 'rulePassValue' and 'ruleFailValue' attribute", config, this);
@@ -632,25 +737,36 @@ define(["dojo/_base/declare",
                }
             }
 
-            // Generate the initial set of options in the following precedence...
-            // 1) PubSub Config
-            // 2) Callback function
-            // 3) Fixed options
-            var pubSub = lang.getObject("publishTopic", false, config),
-                callback = lang.getObject("callback", false, config),
-                fixed = lang.getObject("fixed", false, config);
-            if (pubSub && this.getPubSubOptionsImmediately)
-            {
-               this.getPubSubOptions(config);
-            }
-            else if (callback)
-            {
-               this.processCallbackOptions(callback, config);
-            }
-            else if (fixed)
-            {
-               this.processFixedOptions(fixed);
-            }
+            this.getInitialOptions(config);
+         }
+      },
+
+      /**
+       * Generate the initial set of options in the following precedence: 
+       * 
+       * <ol><li>PubSub Config</li>
+       * <li>Callback function</li>
+       * <li>Fixed options</li></ol>
+       *  
+       * @instance
+       * @param {object} config The options configuration
+       * @since 1.0.96
+       */
+      getInitialOptions: function alfresco_forms_controls_BaseFormControl__getInitialOptions(config) {
+         var pubSub = lang.getObject("publishTopic", false, config),
+             callback = lang.getObject("callback", false, config),
+             fixed = lang.getObject("fixed", false, config);
+         if (pubSub && this.getPubSubOptionsImmediately)
+         {
+            this.getPubSubOptions(config);
+         }
+         else if (callback)
+         {
+            this.processCallbackOptions(callback, config);
+         }
+         else if (fixed)
+         {
+            this.processFixedOptions(fixed);
          }
       },
 
@@ -720,6 +836,11 @@ define(["dojo/_base/declare",
          else
          {
             this.alfLog("warn", "An option was provided with neither label nor value", option, this);
+         }
+
+         if (option.description)
+         {
+            option.description = this.message(option.description);
          }
 
          // See AKU-844 - also update the value attribute whilst we're here, not the correct location despite
@@ -998,7 +1119,7 @@ define(["dojo/_base/declare",
        */
       addOption: function alfresco_forms_controls_BaseFormControl__addOption(option, index) {
          this.processOptionLabel(option, index);
-         this.wrappedWidget.addOption(option);
+         this.wrappedWidget.addOption(option, index);
       },
 
       /**
@@ -1038,6 +1159,26 @@ define(["dojo/_base/declare",
        * @since 1.0.47
        */
       validationErrorAltText: "validation.error.alttext",
+
+      /**
+       * The local image to use for a validation-warning indicator.
+       *
+       * @instance
+       * @type {string}
+       * @default
+       * @since 1.0.91
+       */
+      validationWarningImg: "warning-16.png",
+
+      /**
+       * The alt-text label to use for the validation-warning indicator.
+       *
+       * @instance
+       * @type {string}
+       * @default
+       * @since 1.0.91
+       */
+      validationWarningAltText: "validation.warning.alttext",
 
       /**
        * The local image to use for the inline help indicator.
@@ -1089,6 +1230,13 @@ define(["dojo/_base/declare",
             0: this.message(this.label)
          });
 
+         if (!this.validationWarningImgSrc)
+         {
+            this.validationWarningImgSrc = require.toUrl("alfresco/forms/controls/css/images/" + this.validationWarningImg);
+         }
+         this.validationWarningAltText = this.message(this.validationWarningAltText, {
+            0: this.message(this.label)
+         });
          if (!this.validationErrorImgSrc)
          {
             this.validationErrorImgSrc = require.toUrl("alfresco/forms/controls/css/images/" + this.validationErrorImg);
@@ -1131,6 +1279,11 @@ define(["dojo/_base/declare",
          if (this.additionalCssClasses)
          {
             domClass.add(this.domNode, this.additionalCssClasses);
+         }
+
+         if (this.hideValidation)
+         {
+            domClass.add(this.domNode, "alfresco-forms-controls-BaseFormControl--validation-hidden");
          }
 
          if (this.inlineHelp)
@@ -1227,7 +1380,6 @@ define(["dojo/_base/declare",
             }
 
             this.setValue(this.initialValue);
-            delete this.initialValue;
 
             // Iterate over all the deferred value assignments, arguably we could just process the last deferred
             // value, however it may be necessary to ensure that the intended flow of processing is maintained
@@ -1318,6 +1470,13 @@ define(["dojo/_base/declare",
                   evt.preventFocusTheft = true;
                }
             }));
+
+            // See AKU-1049 - emit a custom event to be captured by the form to let it know to re-publish
+            // all the field values. This will allow "late" created fields to process rules...
+            on.emit(this.domNode, "ALF_FIELD_ADDED_TO_FORM", {
+               bubbles: true,
+               cancelable: true
+            });
          }
          else
          {
@@ -1375,6 +1534,19 @@ define(["dojo/_base/declare",
        * @default
        */
       _hadFocus: false,
+
+      /**
+       * This is used to log whether or not the form control has been updated by the user, typically this would
+       * be set when the user performs an action (such as typing). Unlike 
+       * [_hadFocus]{@link module:alfresco/forms/controls/BaseFormControl#_hadFocus} it is not set by all form
+       * controls.
+       * 
+       * @instance
+       * @type {boolean}
+       * @default
+       * @since 1.0.89
+       */
+      _hadUserUpdate: false,
 
       /**
        * This function is called whenever the form control loses focus. When this happens the
@@ -1449,6 +1621,10 @@ define(["dojo/_base/declare",
             {
                this.alfLog("log", "An exception was thrown retrieving the value for field: '" + this.fieldId + "'");
             }
+         }
+         if (this.trimValue && value && typeof value.trim === "function")
+         {
+            value = value.trim();
          }
          value = this.convertStringValuesToBoolean(value);
          return value;
@@ -1571,7 +1747,7 @@ define(["dojo/_base/declare",
             // yet complete. It will be removed when initialization completes and from that moment on
             // we can rely on the value returned by the "getValue" function.
             var value;
-            if (typeof this.initialValue === "undefined")
+            if (this.___addedToDocument)
             {
                value = this.getValue();
             }
@@ -1589,11 +1765,15 @@ define(["dojo/_base/declare",
                });
             }
          }
-         else
+         else if (!this.___addedToDocument)
          {
             // If passed a deferred object then save it for resolving once the widget is added to
             // the document...
             this.deferredValuePublication = deferred;
+         }
+         else
+         {
+            deferred.resolve();
          }
       },
 
@@ -1711,7 +1891,7 @@ define(["dojo/_base/declare",
        */
       processValidationRules: function alfresco_forms_controls_BaseFormControl__processValidationRules() {
          var valid = true;
-         if (this._visible && !this._disabled)
+         if ((this._visible || this.validateWhenHidden) && !this._disabled)
          {
             // Things to validate against are...
             // 1) Does the widget have a value if it is required
@@ -1778,9 +1958,29 @@ define(["dojo/_base/declare",
        * @instance
        */
       showValidationFailure: function alfresco_forms_controls_BaseFormControl__showValidationFailure() {
-         if (this.showValidationErrorsImmediately || this._hadFocus)
+         if (this.showValidationErrorsImmediately || (this._hadFocus || this._hadUserUpdate))
          {
             domClass.add(this.domNode, "alfresco-forms-controls-BaseFormControl--invalid");
+         }
+         else
+         {
+            this._pendingValidationFailureDisplay = true;
+         }
+      },
+
+      /**
+       * By default this simply adds the "validation-warning" and "display" classes to the _validationIndicator
+       * and _validationMessage DOM nodes respectively. However, the code has been broken out into a separate function
+       * to support extending classes that may provide alternative HTML templates or wish to render errors
+       * differently.
+       *
+       * @instance
+       * @since 1.0.91
+       */
+      showValidationWarning: function alfresco_forms_controls_BaseFormControl__showValidationWarning() {
+         if (this.showValidationErrorsImmediately || (this._hadFocus || this._hadUserUpdate))
+         {
+            domClass.add(this.domNode, "alfresco-forms-controls-BaseFormControl--warning");
          }
          else
          {
@@ -1798,6 +1998,7 @@ define(["dojo/_base/declare",
        */
       hideValidationFailure: function alfresco_forms_controls_BaseFormControl__hideValidationFailure() {
          domClass.remove(this.domNode, "alfresco-forms-controls-BaseFormControl--invalid");
+         domClass.remove(this.domNode, "alfresco-forms-controls-BaseFormControl--warning");
          this._pendingValidationFailureDisplay = false;
       },
 
@@ -1827,7 +2028,86 @@ define(["dojo/_base/declare",
          }
          else
          {
-            // Process dot-notation property names...
+            this.setFormControlValue(values);
+         }
+      },
+
+      /**
+       * This is called from [addFormControlValue]{@link module:alfresco/forms/controls/BaseFormControl#addFormControlValue}
+       * when evaluation of the field configuration and state confirms the value can be set.
+       * 
+       * @instance
+       * @param {object} values The object to update with the current value of the control
+       * @since 1.0.82
+       * @overridable
+       */
+      setFormControlValue: function alfresco_forms_controls_BaseFormControl__setFormControlValue(values) {
+         if (this.addedAndRemovedValues)
+         {
+            var addedName = this.name + this.addedNameSuffix;
+            var removedName = this.name + this.removedNameSuffix;
+
+            if (this.initialValue)
+            {
+               var initialPick = this.initialValue;
+               var currentPick = this.getValue();
+               if (this.valueDelimiter)
+               {
+                  initialPick = this.initialValue.split(this.valueDelimiter);
+                  currentPick = currentPick.split(this.valueDelimiter);
+               }
+               
+               var added = [];
+               var removed = [];
+
+               array.forEach(currentPick, function(currItem) {
+                  // If the current picked item was in the inital selection it has not been added...
+                  // ... BUT if the current pick was NOT in the inital selection it HAS been added
+                  if (array.some(initialPick, function(intialItem) {
+                     return currItem === intialItem;
+                  })) {
+                     // No action required, the current pick was also in the initial pick...
+                  }
+                  else
+                  {
+                     // The current pick was not an initial pick so has been added...
+                     added.push(currItem);
+                  }
+               }, this);
+
+               array.forEach(initialPick, function(intialItem) {
+                  // If the initially picked item is in the current selection it has not been removed...
+                  // ... BUT if the initially picked item is NOT in the current selection it HAS been removed
+                  if (array.some(currentPick, function(currItem) {
+                     return currItem === intialItem;
+                  })) {
+                     // No action required, the current pick was also in the initial pick...
+                  }
+                  else
+                  {
+                     // The initial pick is not a current pick so has been removed...
+                     removed.push(intialItem);
+                  }
+               }, this);
+
+               if (this.valueDelimiter)
+               {
+                  added = added.join(this.valueDelimiter);
+                  removed = removed.join(this.valueDelimiter);
+               }
+
+               lang.setObject(addedName, added, values);
+               lang.setObject(removedName, removed, values);
+            }
+            else
+            {
+               // Nothing removed, everything added...
+               lang.setObject(addedName, this.getValue(), values);
+               lang.setObject(removedName, (this.valueDelimiter ? "": []), values);
+            }
+         }
+         else
+         {
             lang.setObject(this.get("name"), this.getValue(), values);
          }
       },
@@ -1838,8 +2118,9 @@ define(["dojo/_base/declare",
        *
        * @instance
        * @param {object} values The object to set the each form control value from
+       * @param {boolean} initialization Indicates whether this call is part of the initialization of the containing form
        */
-      updateFormControlValue: function alfresco_forms_controls_BaseFormControl__updateFormControlValue(values) {
+      updateFormControlValue: function alfresco_forms_controls_BaseFormControl__updateFormControlValue(values, initialization) {
          var hidden = this._visible !== undefined && this._visible === false;
          var disabled = this._disabled !== undefined && this._disabled === true;
          var noUpdateWhenHiddenOrDisabled = this.noValueUpdateWhenHiddenOrDisabled !== undefined && this.noValueUpdateWhenHiddenOrDisabled === true;
@@ -1857,6 +2138,11 @@ define(["dojo/_base/declare",
                var v = lang.getObject(this.get("name"), false, values);
                if (typeof v !== "undefined")
                {
+                  if (initialization)
+                  {
+                     // If this is set during initalization, then set the initial value...
+                     this.initialValue = v;
+                  }
                   this.setValue(v);
                }
             }

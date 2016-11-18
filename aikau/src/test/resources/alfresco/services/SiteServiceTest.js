@@ -25,12 +25,14 @@
 define(["module",
         "alfresco/TestCommon",
         "alfresco/defineSuite",
-        "intern/chai!assert"],
-        function(module, TestCommon, defineSuite, assert) {
+        "intern/chai!assert",
+        "intern/dojo/node!leadfoot/keys"],
+        function(module, TestCommon, defineSuite, assert, keys) {
 
    var textBoxSelectors = TestCommon.getTestSelectors("alfresco/forms/controls/TextBox");
    var buttonSelectors = TestCommon.getTestSelectors("alfresco/buttons/AlfButton");
    var dialogSelectors = TestCommon.getTestSelectors("alfresco/dialogs/AlfDialog");
+   var selectSelectors = TestCommon.getTestSelectors("alfresco/forms/controls/Select");
 
    var selectors = {
       buttons: {
@@ -38,7 +40,10 @@ define(["module",
       },
       dialogs: {
          createSite: {
-            visible: TestCommon.getTestSelector(dialogSelectors, "visible.dialog", ["CREATE_SITE_DIALOG"])
+            visible: TestCommon.getTestSelector(dialogSelectors, "visible.dialog", ["CREATE_SITE_DIALOG"]),
+            hidden: TestCommon.getTestSelector(dialogSelectors, "hidden.dialog", ["CREATE_SITE_DIALOG"]),
+            confirmationButton: TestCommon.getTestSelector(dialogSelectors, "form.dialog.confirmation.button", ["CREATE_SITE_DIALOG"]),
+            disabledConfirmationButton: TestCommon.getTestSelector(dialogSelectors, "disabled.form.dialog.confirmation.button", ["CREATE_SITE_DIALOG"])
          }
       },
       textBoxes: {
@@ -47,6 +52,15 @@ define(["module",
          },
          createSiteShortName: {
             input: TestCommon.getTestSelector(textBoxSelectors, "input", ["CREATE_SITE_FIELD_SHORTNAME"])
+         }
+      },
+      selectControls: {
+         sitePresets: {
+            dropDown: TestCommon.getTestSelector(selectSelectors, "option.menu", ["CREATE_SITE_FIELD_PRESET"]),
+            openIcon: TestCommon.getTestSelector(selectSelectors, "open.menu.icon", ["CREATE_SITE_FIELD_PRESET"]),
+            options: TestCommon.getTestSelector(selectSelectors, "options", ["CREATE_SITE_FIELD_PRESET"]),
+            option1: TestCommon.getTestSelector(selectSelectors, "nth.option.label", ["CREATE_SITE_FIELD_PRESET", "1"]),
+            option2: TestCommon.getTestSelector(selectSelectors, "nth.option.label", ["CREATE_SITE_FIELD_PRESET", "2"])
          }
       }
    };
@@ -60,14 +74,14 @@ define(["module",
 
          .findByCssSelector(selectors.buttons.createSite)
             .click()
-            .end()
+         .end()
 
          .findByCssSelector(selectors.dialogs.createSite.visible)
-            .end()
+         .end()
 
          .findByCssSelector(selectors.textBoxes.createSiteTitle.input)
             .type(" has*odd & chars")
-            .end()
+         .end()
 
          .findByCssSelector(selectors.textBoxes.createSiteShortName.input)
             .getProperty("value")
@@ -80,11 +94,12 @@ define(["module",
          return this.remote.findByCssSelector(selectors.textBoxes.createSiteShortName.input)
             .clearValue()
             .type("fail")
-            .end()
+         .end()
 
          .findByCssSelector(selectors.textBoxes.createSiteTitle.input)
+            .clearValue()
             .type("no copying now")
-            .end()
+         .end()
 
          .findByCssSelector(selectors.textBoxes.createSiteShortName.input)
             .getProperty("value")
@@ -96,99 +111,89 @@ define(["module",
       "Create site (duplicate shortName)": function() {
          return this.remote.findByCssSelector(selectors.textBoxes.createSiteTitle.input)
             .clearValue()
-            .type("fail")
-            .end()
+            .type(" used")
+         .end()
 
-         .findById("CREATE_SITE_DIALOG_OK_label")
-            .click()
-            .end()
+         .findDisplayedByCssSelector("#CREATE_SITE_FIELD_TITLE .alfresco-forms-controls-BaseFormControl__validation-warning")
+         .end()
 
-         .waitForDeletedByCssSelector(".alfresco-notifications-AlfNotification--visible")
-            .end()
-
-         .findDisplayedById("NOTIFICATION_PROMPT")
-            .end()
-
-         .findById("NOTIFCATION_PROMPT_ACKNOWLEDGEMENT_label")
-            .click()
-            .end()
-
-         .findByCssSelector("#NOTIFICATION_PROMPT.dialogHidden")
-            .end();
+         .findAllByCssSelector(selectors.dialogs.createSite.disabledConfirmationButton)
+            .then(function(elements) {
+               assert.lengthOf(elements, 0);
+            });
       },
 
       "Create site success": function() {
-         return this.remote.findByCssSelector("#CREATE_SITE_DIALOG #CREATE_SITE_FIELD_TITLE .dijitInputContainer input")
+         return this.remote.findByCssSelector(selectors.textBoxes.createSiteTitle.input)
             .clearValue()
             .type("pass")
-            .end()
+         .end()
 
-         .findByCssSelector("#CREATE_SITE_DIALOG #CREATE_SITE_FIELD_SHORTNAME .dijitInputContainer input")
+         .findByCssSelector(selectors.textBoxes.createSiteShortName.input)
             .clearValue()
             .type("pass")
-            .end()
+         .end()
+         
+         .waitForDeletedByCssSelector(selectors.dialogs.createSite.disabledConfirmationButton)
+         .end()
 
          .clearLog()
+         .pressKeys(keys.ENTER)
 
-         .findById("CREATE_SITE_DIALOG_OK_label")
-            .click()
-            .end()
-
-         .findByCssSelector("#CREATE_SITE_DIALOG.dialogHidden")
-            .end()
+         .findByCssSelector(selectors.dialogs.createSite.hidden)
+         .end()
 
          .waitForDeletedByCssSelector(".alfresco-notifications-AlfNotification--visible")
-            .end()
+         .end()
 
          .getLastPublish("ALF_SITE_CREATION_REQUEST")
-            .getLastPublish("ALF_SITE_CREATION_SUCCESS")
-            .getLastPublish("ALF_NAVIGATE_TO_PAGE")
-            .then(function(payload) {
-               assert.propertyVal(payload, "url", "site/pass/dashboard");
-            });
+         .getLastPublish("ALF_ADD_FAVOURITE_SITE")
+         .getLastPublish("ALF_SITE_CREATION_SUCCESS")
+         .getLastPublish("ALF_NAVIGATE_TO_PAGE")
+         .then(function(payload) {
+            assert.propertyVal(payload, "url", "site/pass/dashboard");
+         });
       },
 
       "Edit site": function() {
          return this.remote.findById("EDIT_SITE_label")
             .click()
-            .end()
+         .end()
 
          .findByCssSelector("#EDIT_SITE_DIALOG #EDIT_SITE_FIELD_TITLE .dijitInputContainer input")
             .clearValue()
             .type("New Site Title")
-            .end()
+         .end()
 
          .clearLog()
 
          .findById("EDIT_SITE_DIALOG_OK_label")
             .click()
-            .end()
+            .click() // For some reason in automated testing a second click is required here
+                     // Adding a long pause and a manual click and it works fine...
+         .end()
 
          .findByCssSelector("#EDIT_SITE_DIALOG.dialogHidden")
-            .end()
+         .end()
 
          .waitForDeletedByCssSelector(".alfresco-notifications-AlfNotification--visible")
-            .end()
+         .end()
 
          .getLastPublish("ALF_SITE_EDIT_REQUEST")
             .getLastPublish("ALF_SITE_EDIT_SUCCESS")
             .getLastPublish("ALF_NAVIGATE_TO_PAGE")
             .then(function(payload) {
-               assert.propertyVal(payload, "url", "site/site1/dashboard");
+               assert.propertyVal(payload, "url", "site/site1");
             });
       },
 
       "Edit moderated site": function() {
          return this.remote.findById("EDIT_MODERATED_SITE_label")
             .click()
-            .end()
-
-         // The moderated checkbox should be checked
-         .findByCssSelector("#EDIT_SITE_DIALOG #EDIT_SITE_FIELD_MODERATED .dijitCheckBoxChecked")
          .end()
 
-         // The public visibility radio button should be selected
-         .findByCssSelector("#EDIT_SITE_DIALOG #EDIT_SITE_FIELD_VISIBILITY_CONTROL .dijitRadioChecked input[value=PUBLIC]")
+         // The moderated visibility radio button should be selected
+         .findByCssSelector("#EDIT_SITE_DIALOG #EDIT_SITE_FIELD_VISIBILITY_CONTROL .dijitRadioChecked input[value=MODERATED]")
          .end()
 
          .clearLog()
@@ -206,14 +211,14 @@ define(["module",
       "Request to join site navigates user to their dashboard afterwards": function() {
          return this.remote.findById("REQUEST_SITE_MEMBERSHIP_label")
             .click()
-            .end()
+         .end()
 
          .findByCssSelector(".dialogDisplayed .dijitButtonNode")
             .click()
-            .end()
+         .end()
 
          .waitForDeletedByCssSelector(".dialogDisplayed")
-            .end()
+         .end()
 
          .getLastPublish("ALF_NAVIGATE_TO_PAGE")
             .then(function(payload) {
@@ -226,14 +231,14 @@ define(["module",
       "Requesting to join site with request already pending displays suitable error message": function() {
          return this.remote.findById("REQUEST_SITE_MEMBERSHIP_ALREADY_PENDING_label")
             .click()
-            .end()
+         .end()
 
          .findDisplayedByCssSelector(".alfresco-notifications-AlfNotification__message")
             .getVisibleText()
             .then(function(visibleText) {
                assert.equal(visibleText, "A request to join this site is already pending");
             })
-            .end()
+         .end()
 
          .waitForDeletedByCssSelector(".alfresco-notifications-AlfNotification");
       },
@@ -241,14 +246,14 @@ define(["module",
       "Error occurring when requesting to join site displays error message": function() {
          return this.remote.findById("REQUEST_SITE_MEMBERSHIP_ERROR_label")
             .click()
-            .end()
+         .end()
 
          .findDisplayedByCssSelector(".alfresco-notifications-AlfNotification__message")
             .getVisibleText()
             .then(function(visibleText) {
                assert.equal(visibleText, "The request to join the site failed");
             })
-            .end()
+         .end()
 
          .waitForDeletedByCssSelector(".alfresco-notifications-AlfNotification");
       },
@@ -257,7 +262,7 @@ define(["module",
          return this.remote.findById("CANCEL_PENDING_REQUEST_label")
             .clearLog()
             .click()
-            .end()
+         .end()
 
          .getLastXhr("api/sites/my-site/invitations/foo")
 
@@ -266,7 +271,7 @@ define(["module",
             .then(function(visibleText) {
                assert.equal(visibleText, "Successfully cancelled request to join site My Site");
             })
-            .end()
+         .end()
 
          .waitForDeletedByCssSelector(".alfresco-notifications-AlfNotification")
 
@@ -276,14 +281,14 @@ define(["module",
       "Leave site and confirm user home page override works": function() {
          return this.remote.findById("LEAVE_SITE_label")
             .click()
-            .end()
+         .end()
 
          .findByCssSelector(".dialogDisplayed .dijitButton:first-child .dijitButtonNode")
             .click()
-            .end()
+         .end()
 
          .waitForDeletedByCssSelector(".dialogDisplayed")
-            .end()
+         .end()
 
          .getLastPublish("ALF_NAVIGATE_TO_PAGE")
             .then(function(payload) {
@@ -295,7 +300,7 @@ define(["module",
          return this.remote.findById("BECOME_SITE_MANAGER_label")
             .clearLog()
             .click()
-            .end()
+         .end()
 
          .getLastPublish("ALF_DOCLIST_RELOAD_DATA");
       },
@@ -304,9 +309,121 @@ define(["module",
          return this.remote.findById("BECOME_SITE_MANAGER_PAGE_RELOAD_label")
             .clearLog()
             .click()
-            .end()
+         .end()
 
          .getLastPublish("ALF_RELOAD_PAGE");
+      }
+   });
+
+   defineSuite(module, {
+      name: "SiteService Tests (Reconfigured presets)",
+      testPage: "/SiteService?sitePresets=configured",
+
+      "Reconfigured site presets are correct": function() {
+         return this.remote.setFindTimeout(5000)
+
+         .findByCssSelector(selectors.buttons.createSite)
+            .click()
+         .end()
+
+         .findByCssSelector(selectors.dialogs.createSite.visible)
+         .end()
+
+         .findByCssSelector(selectors.selectControls.sitePresets.openIcon)
+            .click()
+         .end()
+
+         .findDisplayedByCssSelector(selectors.selectControls.sitePresets.dropDown)
+         .end()
+
+         .findAllByCssSelector(selectors.selectControls.sitePresets.options)
+            .then(function(options) {
+               assert.lengthOf(options, 1);
+            })
+         .end()
+
+         .findByCssSelector(selectors.selectControls.sitePresets.option1)
+            .getVisibleText()
+            .then(function(sitePresetLabel) {
+               assert.equal(sitePresetLabel, "Custom");
+            });
+      }
+   });
+
+   defineSuite(module, {
+      name: "SiteService Tests (Additional presets)",
+      testPage: "/SiteService?sitePresets=additional",
+
+      "Reconfigured site presets are correct": function() {
+         return this.remote.setFindTimeout(5000)
+
+         .findByCssSelector(selectors.buttons.createSite)
+            .click()
+         .end()
+
+         .findByCssSelector(selectors.dialogs.createSite.visible)
+         .end()
+
+         .findByCssSelector(selectors.selectControls.sitePresets.openIcon)
+            .click()
+         .end()
+
+         .findDisplayedByCssSelector(selectors.selectControls.sitePresets.dropDown)
+         .end()
+
+         .findAllByCssSelector(selectors.selectControls.sitePresets.options)
+            .then(function(options) {
+               assert.lengthOf(options, 2);
+            })
+         .end()
+
+         .findByCssSelector(selectors.selectControls.sitePresets.option1)
+            .getVisibleText()
+            .then(function(sitePresetLabel) {
+               assert.equal(sitePresetLabel, "Collaboration Site");
+            })
+         .end()
+
+         .findByCssSelector(selectors.selectControls.sitePresets.option2)
+            .getVisibleText()
+            .then(function(sitePresetLabel) {
+               assert.equal(sitePresetLabel, "Additional Custom");
+            });
+      }
+   });
+
+   defineSuite(module, {
+      name: "SiteService Tests (Removed presets)",
+      testPage: "/SiteService?sitePresets=remove",
+
+      "Reconfigured site presets are correct": function() {
+         return this.remote.setFindTimeout(5000)
+
+         .findByCssSelector(selectors.buttons.createSite)
+            .click()
+         .end()
+
+         .findByCssSelector(selectors.dialogs.createSite.visible)
+         .end()
+
+         .findByCssSelector(selectors.selectControls.sitePresets.openIcon)
+            .click()
+         .end()
+
+         .findDisplayedByCssSelector(selectors.selectControls.sitePresets.dropDown)
+         .end()
+
+         .findAllByCssSelector(selectors.selectControls.sitePresets.options)
+            .then(function(options) {
+               assert.lengthOf(options, 1);
+            })
+         .end()
+
+         .findByCssSelector(selectors.selectControls.sitePresets.option1)
+            .getVisibleText()
+            .then(function(sitePresetLabel) {
+               assert.equal(sitePresetLabel, "Additional Custom");
+            });
       }
    });
 });

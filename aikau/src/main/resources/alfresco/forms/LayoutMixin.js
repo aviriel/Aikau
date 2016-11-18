@@ -42,6 +42,74 @@ define(["alfresco/core/Core",
    return declare([AlfCore], {
       
       /**
+       * Iterates over the child form controls and updates their visibility status
+       *
+       * @instance
+       * @param {boolean} status The boolean value to change the visibility state to.
+       * @since 1.0.83
+       */
+      alfVisible: function alfresco_forms_LayoutMixin__alfVisible(status) {
+         when(this.getFormLayoutChildren(), lang.hitch(this, function(children) {
+            array.forEach(children, function(child) {
+               if (typeof child.alfVisible === "function")
+               {
+                  child.alfVisible(status);
+               }
+            }, this);
+         }));
+      },
+
+      /**
+       * Iterates over the child form controls and updates their requirement status
+       *
+       * @instance
+       * @param {boolean} status The boolean value to change the requirement state to
+       * @since 1.0.83
+       */
+      alfRequired: function alfresco_forms_LayoutMixin__alfRequired(status) {
+         when(this.getFormLayoutChildren(), lang.hitch(this, function(children) {
+            array.forEach(children, function(child) {
+               if (typeof child.alfRequired === "function")
+               {
+                  child.alfRequired(status);
+               }
+            }, this);
+         }));
+      },
+
+      /**
+       * Iterates over the child form controls and updates their disablement status
+       *
+       * @instance
+       * @param {boolean} status The boolean status to set the disablity state of the field to.
+       * @since 1.0.83
+       */
+      alfDisabled: function alfresco_forms_LayoutMixin__alfDisabled(status) {
+         when(this.getFormLayoutChildren(), lang.hitch(this, function(children) {
+            array.forEach(children, function(child) {
+               if (typeof child.alfDisabled === "function")
+               {
+                  child.alfDisabled(status);
+               }
+            }, this);
+         }));
+      },
+
+      /**
+       * Sets up the rules for groups visibility, requirement and disablement.
+       *
+       * @instance
+       * @param {boolean} status The boolean status to set the disablity state of the field to.
+       * @since 1.0.83
+       */
+      postMixInProperties: function alfresco_forms_LayoutMixin__postMixInProperties() {
+         this.inherited(arguments);
+         this.processConfig("alfVisible", this.visibilityConfig);
+         this.processConfig("alfRequired", this.requirementConfig);
+         this.processConfig("alfDisabled", this.disablementConfig);
+      },
+
+      /**
        * Iterates over the array of processed widgets and adds the value of each to the supplied object
        *
        * @instance
@@ -110,10 +178,11 @@ define(["alfresco/core/Core",
        * 
        * @instance
        * @param {object} values The object to set the each form control value from
+       * @param {boolean} initialization Indicates whether this call is part of the initialization of the containing form
        */
-      updateFormControlValue: function alfresco_forms_LayoutMixin__addFormControlValue(values) {
+      updateFormControlValue: function alfresco_forms_LayoutMixin__addFormControlValue(values, initialization) {
          when(this.getFormLayoutChildren(), lang.hitch(this, function(children) {
-            array.forEach(children, lang.hitch(this, this.updateChildFormControlValue, values));
+            array.forEach(children, lang.hitch(this, this.updateChildFormControlValue, values, initialization));
          }));
       },
 
@@ -121,13 +190,14 @@ define(["alfresco/core/Core",
        * 
        * @instance
        * @param {object} values The object to set with the value of the supplied widget
+       * @param {boolean} initialization Indicates whether this call is part of the initialization of the containing form
        * @param {object} widget The widget to get the value from
        * @param {number} index The index of the widget
        */
-      updateChildFormControlValue: function alfresco_forms_LayoutMixin__updateChildFormControlValue(values, widget, /*jshint unused:false*/ index) {
+      updateChildFormControlValue: function alfresco_forms_LayoutMixin__updateChildFormControlValue(values, initialization, widget, /*jshint unused:false*/ index) {
          if (typeof widget.addFormControlValue === "function")
          {
-            widget.updateFormControlValue(values);
+            widget.updateFormControlValue(values, initialization);
          }
       },
 

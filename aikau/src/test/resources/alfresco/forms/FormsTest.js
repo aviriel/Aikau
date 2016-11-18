@@ -35,7 +35,8 @@ define(["module",
          setHash: TestCommon.getTestSelector(buttonSelectors, "button.label", ["SET_HASH"]),
          setForm: TestCommon.getTestSelector(buttonSelectors, "button.label", ["SET_FORM_VALUE"]),
          showLabel4: TestCommon.getTestSelector(buttonSelectors, "button.label", ["BUTTON_1"]),
-         hideLabel4: TestCommon.getTestSelector(buttonSelectors, "button.label", ["BUTTON_2"])
+         hideLabel4: TestCommon.getTestSelector(buttonSelectors, "button.label", ["BUTTON_2"]),
+         reset: TestCommon.getTestSelector(buttonSelectors, "button.label", ["RESET"])
       },
       forms: {
          hashForm: {
@@ -52,6 +53,9 @@ define(["module",
          },
          customFieldsForm: {
             confirmationButton: TestCommon.getTestSelector(formSelectors, "confirmation.button", ["CUSTOM_FIELDS_FORM"])
+         },
+         resetForm: {
+            confirmationButton: TestCommon.getTestSelector(formSelectors, "confirmation.button", ["RESET_FORM"])
          }
       },
       textBoxes: {
@@ -75,6 +79,9 @@ define(["module",
          },
          text6: {
             input: TestCommon.getTestSelector(textBoxSelectors, "input", ["TEXT_BOX_6"])
+         },
+         text8: {
+            input: TestCommon.getTestSelector(textBoxSelectors, "input", ["TEXT_BOX_8"])
          },
          addText1: {
             input: TestCommon.getTestSelector(textBoxSelectors, "input", ["ADD_TEXT_BOX_1"])
@@ -207,6 +214,19 @@ define(["module",
                assert.propertyVal(payload, "field5", "test4");
                assert.propertyVal(payload, "field6", "test5");
                assert.propertyVal(payload, "extra", "stuff");
+            });
+      },
+
+      "Additional button can omit form values": function() {
+         return this.remote.findByCssSelector("#ADD_BUTTON_3")
+            .click()
+         .end()
+
+         .getLastPublish("CUSTOM_SCOPE_AddButton3")
+            .then(function(payload) {
+               assert.notProperty(payload, "field5");
+               assert.notProperty(payload, "field6");
+               assert.propertyVal(payload, "original", "only");
             });
       },
 
@@ -441,6 +461,49 @@ define(["module",
             .isDisplayed()
             .then(function(displayed) {
                assert.isFalse(displayed);
+            });
+      },
+
+      "Reset a form": function() {
+         return this.remote.findDisplayedByCssSelector(selectors.forms.resetForm.confirmationButton)
+            .clearLog()
+            .click()
+         .end()
+
+         .getLastPublish("RESETTABLE_OK")
+            .then(function(payload) {
+               assert.propertyVal(payload, "text", "Original");
+            })
+         .end()
+
+         .findByCssSelector(selectors.textBoxes.text8.input)
+            .clearValue()
+            .type("Update")
+         .end()
+
+         .findByCssSelector(selectors.forms.resetForm.confirmationButton)
+            .clearLog()
+            .click()
+         .end()
+
+         .getLastPublish("RESETTABLE_OK")
+            .then(function(payload) {
+               assert.propertyVal(payload, "text", "Update");
+            })
+         .end()
+
+         .findByCssSelector(selectors.buttons.reset)
+            .click()
+         .end()
+
+         .findByCssSelector(selectors.forms.resetForm.confirmationButton)
+            .clearLog()
+            .click()
+         .end()
+
+         .getLastPublish("RESETTABLE_OK")
+            .then(function(payload) {
+               assert.propertyVal(payload, "text", "Original");
             });
       }
    });
